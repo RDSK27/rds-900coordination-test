@@ -375,7 +375,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v6</div>
+    <div class="app-ver">v7</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -602,17 +602,17 @@ function drawSquares(g,W,H,p,t){
 }
 /* nombre, duracion del movimiento (ms), objetivo (progreso 0..1), dibujo */
 var EXS=[
-  { name:'Barra',       dur:2300, tgt:1.00, k:1.4, draw:drawBar },   /* v5: objetivo arriba, en el final de la barra que asciende */
+  { name:'Barra',       dur:2300, tgt:1.00, k:1.8, draw:drawBar },   /* v7: k 1.8 (v6: 1.4) */   /* v5: objetivo arriba, en el final de la barra que asciende */
   { name:'Círculo', dur:2300, tgt:0.70, draw:drawCircle },
   { name:'Franja',      dur:2200, tgt:0.50, draw:drawStrip },   /* v6: objetivo en el CENTRO de la franja */
   { name:'Reloj',       dur:2900, tgt:0.75, draw:drawClock },
-  { name:'Mira',        dur:2400, tgt:0.66, draw:drawCross },
+  { name:'Mira',        dur:2400, tgt:0.66, tolMs:15, draw:drawCross },   /* v7: el 100 mas exigente (15 ms) para que sea justo el centro de la cruz */
   { name:'Semicírculo', dur:2400, tgt:0.50, draw:drawHalf },
-  { name:'Diagonal',    dur:2600, tgt:0.70, k:1.4, draw:drawDiag },
+  { name:'Diagonal',    dur:2600, tgt:0.50, k:1.4, draw:drawDiag },   /* v7: objetivo en la MITAD de la linea */
   { name:'Aro',         dur:3000, tgt:0.50, k:1.4, cyc:true, draw:drawRing },   /* v6: giro continuo (una vuelta = dur), siempre en el mismo sentido */
   { name:'Cuadrados',   dur:2400, tgt:0.50, draw:drawSquares }   /* v6: objetivo en el centro del recorrido */
 ];
-EXS.forEach(function(x){ x.dur=Math.round(x.dur/(EX_SPEED*(x.k||1))); x.tol=Math.max(EX_TOL, EX_TOL_MS/x.dur); });   /* k = velocidad extra de esa celda */
+EXS.forEach(function(x){ x.dur=Math.round(x.dur/(EX_SPEED*(x.k||1))); x.tol=x.tolMs ? x.tolMs/x.dur : Math.max(EX_TOL, EX_TOL_MS/x.dur); });   /* k = velocidad extra de esa celda */
 function exScore(dp,tol){ dp=Math.abs(dp); tol=(tol==null)?EX_TOL:tol; return dp<=tol ? 100 : Math.max(0, Math.round(100*(1-(dp-tol)/EX_SPAN))); }
 
 /* sonidos: pitido discreto al pulsar y logros con campanas suaves (notas que suben) segun la puntuacion */
