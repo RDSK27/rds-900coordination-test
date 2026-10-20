@@ -1,5 +1,5 @@
 /* RDS 900 Coordination - Service Worker */
-var CACHE = '900coordination-v18';
+var CACHE = '900coordination-v19';
 var ASSETS = [
   './',
   './index.html',
