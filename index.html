@@ -337,7 +337,7 @@ if('serviceWorker' in navigator){
           <button class="start-btn rank-btn" ontouchend="event.stopPropagation();" onclick="showRanking()" aria-label="Ranking"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 13.5v7.5M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></svg></button>
         </div>
       </div>
-  <div class="app-ver" style="margin-top:6px;padding-top:0;">v22</div>
+  <div class="app-ver" style="margin-top:6px;padding-top:0;">v23</div>
   <div id="user-name-bar" style="margin-top:8px;">
     <div style="display:flex;width:200px;gap:0;margin:0 auto;">
       <input id="user-ini-input" type="text" maxlength="3" placeholder="INI"
@@ -699,18 +699,30 @@ function runGame(){
   step();
 }
 function beginPlay(){
-  S.coverTo=0; S.running=true; S.t0=performance.now();
+  S.coverTo=0; S.running=true; S.t0=performance.now(); S.lastRef=S.t0; S.plan=makePlan();
   startEx(0);
   S.raf=requestAnimationFrame(loop);
 }
-function randTgt(i,prev){   /* objetivo al azar (Extremo: 0,20-0,90; Limite: 0,12-0,95), distinto del anterior */
-  var lo=(S.mode==='limite')?0.12:0.20, hi=(S.mode==='limite')?0.95:0.90, t, k=0;
-  do{ t=lo+Math.random()*(hi-lo); k++; }while(prev!=null && Math.abs(t-prev)<0.15 && k<30);
-  return Math.round(t*100)/100;
+/* v23: OBJETIVOS EQUILIBRADOS (Extremo y Limite). Zonas del recorrido: inicio (0,15-0,30), centro (0,42-0,58) y final (espejo del inicio: 0,70-0,85). En una partida, de los 9 ejercicios,
+   3 llevan el objetivo en el inicio, 3 en el centro y 3 en el final, en orden aleatorio; los 3 del final son EXACTAMENTE los espejos (1 - x) de los 3 del inicio, asi quedan proporcionados.
+   En Extremo, cada cambio de objetivo dentro del ejercicio salta a otra zona distinta de la actual (valor al azar dentro de la zona; el del final, espejo de uno del inicio). */
+function rnd(a,b){ return a+Math.random()*(b-a); }
+function r2(x){ return Math.round(x*100)/100; }
+function makePlan(){
+  var ini=[0,0,0].map(function(){ return r2(rnd(0.15,0.30)); }), cen=[0,0,0].map(function(){ return r2(rnd(0.42,0.58)); }), fin=ini.map(function(x){ return r2(1-x); });
+  var zs=[].concat(ini,cen,fin), i, j, t;
+  for(i=zs.length-1;i>0;i--){ j=Math.floor(Math.random()*(i+1)); t=zs[i]; zs[i]=zs[j]; zs[j]=t; }
+  return zs;
+}
+function zoneOf(t){ return t<0.36 ? 0 : (t>0.64 ? 2 : 1); }
+function randTgt(i,prev){   /* siguiente objetivo (Extremo): otra zona distinta de la del anterior */
+  var z=(prev==null) ? Math.floor(Math.random()*3) : (zoneOf(prev)+1+Math.floor(Math.random()*2))%3, v;
+  if(z===1) v=rnd(0.42,0.58); else { v=rnd(0.15,0.30); if(z===2) v=1-v; }
+  return r2(v);
 }
 function startEx(i){
   S.idx=i; S.exStart=performance.now(); S.lock=false; S.cellP[i]=0; S.leg=0;
-  S.tgt=(S.mode==='normal') ? EXS[i].tgt : randTgt(i,null); S.cellT[i]=S.tgt;
+  S.tgt=(S.mode==='normal') ? EXS[i].tgt : ((S.plan&&S.plan[i]!=null)?S.plan[i]:randTgt(i,null)); S.cellT[i]=S.tgt;
   S.cells.forEach(function(c,k){ c.classList.toggle('act', k===i); });
   $('trialCount').textContent=(i+1)+'/'+EX_N;
   drawCell(i,0);
@@ -735,7 +747,7 @@ function stopEx(p, ms){   /* congela el ejercicio actual con progreso p y puntua
   if(!S.running || S.lock) return;
   var i=S.idx, ex=EXS[i], sc=exScore(exErr(ex,p), ex.tol, ex.vk), fail=(S.mode==='limite' && sc<LIM_MIN);
   S.lock=true; S.cellP[i]=p; drawCell(i,p);
-  S.scores.push(sc); S.times.push(ms); S.pts+=sc; S.pressed++;   /* v17: tambien suma el ejercicio fallado (Limite) */
+  var nowT=performance.now(); S.times.push(nowT-S.lastRef); S.lastRef=nowT; S.scores.push(sc); S.pts+=sc; S.pressed++;   /* v17: tambien suma el ejercicio fallado (Limite) */
   var b=S.cells[i].querySelector('.cbadge'); b.textContent=String(sc); b.className='cbadge show'+(sc>=100?' ok':(fail?' bad':''));
   S.cells[i].classList.remove('act'); if(sc>=100) S.cells[i].classList.add('perfect');
   $('stAvg').textContent=String(S.pts); $('stLast').textContent=String(sc); setProgress(S.pressed/EX_N);
