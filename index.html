@@ -375,7 +375,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v3</div>
+    <div class="app-ver">v4</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -540,8 +540,9 @@ var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,runnin
    el movimiento llega al final y se congela (puntua por ese error, normalmente 0). Se guarda tambien el TIEMPO de parada (ms desde que empieza el movimiento hasta STOP); la media es
    el desempate del ranking (puntos desc, media de parada asc).
    DECISIONES MIAS no confirmadas: objetivos, duraciones y la formula de puntos de cada ejercicio (el video no deja ver la regla exacta); STOP tambien se activa tocando el recuadro activo. */
-var EX_TOL=0.02, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9;   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
-var EX_SPEED=1.5;   /* v2: factor de velocidad de TODOS los movimientos (1 = la de la v1; 1.5 = un 50 % mas rapido, duraciones /1,5) */
+var EX_TOL=0.025, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9;   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
+var EX_SPEED=2.0;   /* v4: 2.0 (v2: 1.5; v1: 1.0). Tolerancia 0,025 (v1 0,015; v2 0,02) para mantener unos 30 ms de margen para el 100 */
+/* (nota v2:) */    /* v2: factor de velocidad de TODOS los movimientos (1 = la de la v1; 1.5 = un 50 % mas rapido, duraciones /1,5) */
 function dpr0(){ return Math.min(3, Math.max(1, window.devicePixelRatio||1)); }
 function fillC(g,x,y,r,col){ g.fillStyle=col; g.beginPath(); g.arc(x,y,Math.max(0.1,r),0,6.2832); g.fill(); }
 function line2(g,x0,y0,x1,y1,col,lw){ g.strokeStyle=col; g.lineWidth=lw; g.lineCap='round'; g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke(); }
