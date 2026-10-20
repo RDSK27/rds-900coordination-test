@@ -378,7 +378,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v11</div>
+    <div class="app-ver">v12</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -543,7 +543,7 @@ var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,runnin
    el movimiento llega al final y se congela (puntua por ese error, normalmente 0). Se guarda tambien el TIEMPO de parada (ms desde que empieza el movimiento hasta STOP); la media es
    el desempate del ranking (puntos desc, media de parada asc).
    MODOS (v10): NORMAL = lo anterior (ida y vuelta, objetivo fijo; en las celdas 1 y 2 el objetivo es el extremo y no se dibuja). EXTREMO = el objetivo CAMBIA: se dibuja una linea roja en la 1 y un circulo
-   rojo en la 2, en las demas cambia de sitio, y cada vez que el movimiento llega a un limite (inferior o superior; en las celdas de giro, al completar cada vuelta) el objetivo vuelve a cambiar al azar.
+   rojo en la 2, en las demas cambia de sitio, y el objetivo vuelve a cambiar al azar tras cada IDA Y VUELTA completa (v12; antes cambiaba en cada tramo), o tras DOS vueltas en las celdas de giro (reloj, aro).
    LIMITE = el objetivo puede estar en CUALQUIER sitio (se dibuja en todas), un UNICO movimiento (solo la ida, sin vuelta) y cada ejercicio debe sacar al menos LIM_MIN=90; con menos de 90 el
    ejercicio se da por FALLADO: la partida TERMINA y NO SE GUARDA nada (pantalla Fallo; decision de Roberto, v11).
    DECISIONES MIAS no confirmadas: objetivos, duraciones y la formula de puntos de cada ejercicio (el video no deja ver la regla exacta); STOP tambien se activa tocando el recuadro activo. */
@@ -719,7 +719,7 @@ function loop(){
     var ex=EXS[S.idx], ms=now-S.exStart, x=ms/ex.dur;
     if(S.mode==='limite' && x>=1){ stopEx(1, ms); }   /* un solo movimiento: si llega al final sin pulsar se congela y puntua por ese error */
     else {
-      if(S.mode==='extremo'){ var leg=Math.floor(x); if(leg!==S.leg){ S.leg=leg; S.tgt=randTgt(S.idx,S.tgt); S.cellT[S.idx]=S.tgt; } }   /* v10: en cada limite (inferior/superior o vuelta completa) el objetivo cambia */
+      if(S.mode==='extremo'){ var leg=Math.floor(x/2); if(leg!==S.leg){ S.leg=leg; S.tgt=randTgt(S.idx,S.tgt); S.cellT[S.idx]=S.tgt; } }   /* v12: el objetivo cambia tras cada IDA Y VUELTA completa (2 tramos), o tras DOS vueltas en las celdas de giro (reloj, aro): asi se puede acertar en la ida y en la vuelta antes de que cambie */
       var p=pOf(ex,ms); S.cellP[S.idx]=p; drawCell(S.idx,p);
     }
   }
