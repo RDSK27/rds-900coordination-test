@@ -375,7 +375,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v7</div>
+    <div class="app-ver">v8</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -549,14 +549,13 @@ function fillC(g,x,y,r,col){ g.fillStyle=col; g.beginPath(); g.arc(x,y,Math.max(
 function line2(g,x0,y0,x1,y1,col,lw){ g.strokeStyle=col; g.lineWidth=lw; g.lineCap='round'; g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke(); }
 var C_RED='#E63312', C_AMB='#F5A623', C_YEL='#FFE680';
 function drawBar(g,W,H,p,t){
-  var m=H*0.10, hmax=H-2*m, bw=W*0.26, x=(W-bw)/2, base=H-m;
+  var m=H*0.07, hmax=H-2*m, bw=W*0.26, x=(W-bw)/2, base=H-m;
   var gr=g.createLinearGradient(0,base-hmax,0,base); gr.addColorStop(0,C_YEL); gr.addColorStop(1,C_AMB);   /* v5: barra AMARILLA como el resto de moviles */
   g.fillStyle=gr; g.fillRect(x, base-p*hmax, bw, Math.max(1,p*hmax));
-  line2(g, W*0.20, base-t*hmax, W*0.80, base-t*hmax, C_RED, 3.2);   /* objetivo: marca ROJA arriba, en el final del recorrido */
+  /* v8: SIN marca de objetivo: el objetivo es el extremo (el tope de la barra) pero no se dibuja */
 }
 function drawCircle(g,W,H,p,t){
-  var cx=W/2, cy=H/2, R=Math.min(W,H)*0.44; fillC(g,cx,cy,p*R,'#F5A623');
-  g.strokeStyle='#222'; g.lineWidth=2.2; g.setLineDash([4,3]); g.beginPath(); g.arc(cx,cy,t*R,0,6.2832); g.stroke(); g.setLineDash([]);
+  var cx=W/2, cy=H/2, R=Math.min(W,H)*0.47; fillC(g,cx,cy,p*R,'#F5A623');   /* v8: SIN anillo: el objetivo es el borde exterior (maximo del circulo) y no se dibuja */
 }
 function drawStrip(g,W,H,p,t){
   var m=W*0.08, wi=W-2*m, bh=H*0.38, y=(H-bh)/2, gr=g.createLinearGradient(0,y,0,y+bh); gr.addColorStop(0,'#FFE680'); gr.addColorStop(1,'#F5A623');
@@ -564,7 +563,7 @@ function drawStrip(g,W,H,p,t){
 }
 function drawClock(g,W,H,p,t){
   var cx=W/2, cy=H/2, R=Math.min(W,H)*0.42, a0=-Math.PI/2, a=a0+p*2*Math.PI, at=a0+t*2*Math.PI, gr=g.createRadialGradient(cx,cy,0,cx,cy,R);
-  gr.addColorStop(0,'#FFF3A0'); gr.addColorStop(1,'#F5A623'); g.fillStyle=gr; g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,R,a0,a+0.0001,false); g.closePath(); g.fill();
+  gr.addColorStop(0,'#FFF3A0'); gr.addColorStop(1,'#F5A623'); g.fillStyle=gr; g.beginPath(); g.arc(cx,cy,R,0,6.2832); g.fill();   /* v8: disco completo; solo gira la aguja (continuo, sentido horario) */
   g.strokeStyle='#bbb'; g.lineWidth=1.5; g.beginPath(); g.arc(cx,cy,R,0,6.2832); g.stroke();
   line2(g,cx,cy,cx+R*1.04*Math.cos(at),cy+R*1.04*Math.sin(at),'#E63312',3.2); line2(g,cx,cy,cx+R*Math.cos(a),cy+R*Math.sin(a),'#2DBE2D',3.2);
 }
@@ -590,8 +589,8 @@ function drawDiag(g,W,H,p,t){
 function drawRing(g,W,H,p,t){
   var cx=W/2, cy=H/2, R=Math.min(W,H)*0.37, at=-Math.PI/2+t*2*Math.PI, a=-Math.PI/2+p*2*Math.PI, k=W*0.07;
   g.strokeStyle='#333'; g.lineWidth=2; g.beginPath(); g.arc(cx,cy,R,0,6.2832); g.stroke();
-  line2(g,cx+(R-k)*Math.cos(at),cy+(R-k)*Math.sin(at),cx+(R+k)*Math.cos(at),cy+(R+k)*Math.sin(at),'#222',3.2);
-  g.fillStyle=C_RED; g.strokeStyle='#000'; g.lineWidth=2.4;   /* v6: bola ROJA llena con borde NEGRO */
+  line2(g,cx+(R-k)*Math.cos(at),cy+(R-k)*Math.sin(at),cx+(R+k)*Math.cos(at),cy+(R+k)*Math.sin(at),C_RED,3.6);   /* v8: objetivo ROJO */
+  g.fillStyle='#FFD21F'; g.strokeStyle='#000'; g.lineWidth=2.4;   /* v8: bola rellena de AMARILLO (borde negro) */
    g.beginPath(); g.arc(cx+R*Math.cos(a),cy+R*Math.sin(a),W*0.065,0,6.2832); g.fill(); g.stroke();
 }
 function drawSquares(g,W,H,p,t){
@@ -603,9 +602,9 @@ function drawSquares(g,W,H,p,t){
 /* nombre, duracion del movimiento (ms), objetivo (progreso 0..1), dibujo */
 var EXS=[
   { name:'Barra',       dur:2300, tgt:1.00, k:1.8, draw:drawBar },   /* v7: k 1.8 (v6: 1.4) */   /* v5: objetivo arriba, en el final de la barra que asciende */
-  { name:'Círculo', dur:2300, tgt:0.70, draw:drawCircle },
+  { name:'Círculo', dur:2300, tgt:1.00, draw:drawCircle },   /* v8: objetivo = maximo del circulo */
   { name:'Franja',      dur:2200, tgt:0.50, draw:drawStrip },   /* v6: objetivo en el CENTRO de la franja */
-  { name:'Reloj',       dur:2900, tgt:0.75, draw:drawClock },
+  { name:'Reloj',       dur:2900, tgt:0.75, cyc:true, draw:drawClock },   /* v8: giro continuo horario (una vuelta = dur) */
   { name:'Mira',        dur:2400, tgt:0.66, tolMs:15, draw:drawCross },   /* v7: el 100 mas exigente (15 ms) para que sea justo el centro de la cruz */
   { name:'Semicírculo', dur:2400, tgt:0.50, draw:drawHalf },
   { name:'Diagonal',    dur:2600, tgt:0.50, k:1.4, draw:drawDiag },   /* v7: objetivo en la MITAD de la linea */
