@@ -375,7 +375,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v5</div>
+    <div class="app-ver">v6</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -536,11 +536,11 @@ var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,runnin
    Rejilla 3x3 de ejercicios que se juegan UNO DETRAS DE OTRO (izquierda->derecha, arriba->abajo), como en el video de Roberto. En cada uno hay un movimiento que avanza solo
    (barra que crece, circulo que crece, franja, sector tipo reloj, punto hacia una mira, semicirculo, segmento por una diagonal, bola por un aro, cuadrado que se encoge) y una
    MARCA (objetivo). Se pulsa STOP para congelarlo lo mas cerca posible de la marca: puntuacion 0-100 por ejercicio (100 = clavado, suena un sonido de logro) y 9 x 100 = 900.
-   Error = |p - objetivo| con p = progreso del movimiento (0..1) y duracion fija por ejercicio: 100 si el error <= EX_TOL; baja linealmente hasta 0 a EX_TOL+EX_SPAN. v5: el movimiento va y VUELVE (ida y vuelta, sin fin hasta pulsar STOP; tras EX_CYCLES=3 idas y vueltas se congela solo y puntua por ese error). v1-v4: Si no se pulsaba a tiempo
+   Error = |p - objetivo| con p = progreso del movimiento (0..1) y duracion fija por ejercicio: 100 si el error <= EX_TOL; baja linealmente hasta 0 a EX_TOL+EX_SPAN. v6: el movimiento va y VUELVE sin fin hasta pulsar STOP (sin limite de idas y vueltas); el aro gira siempre en el mismo sentido; celdas 1, 7 y 8 mas rapidas (k=1.4). v1-v4: Si no se pulsaba a tiempo
    el movimiento llega al final y se congela (puntua por ese error, normalmente 0). Se guarda tambien el TIEMPO de parada (ms desde que empieza el movimiento hasta STOP); la media es
    el desempate del ranking (puntos desc, media de parada asc).
    DECISIONES MIAS no confirmadas: objetivos, duraciones y la formula de puntos de cada ejercicio (el video no deja ver la regla exacta); STOP tambien se activa tocando el recuadro activo. */
-var EX_TOL=0.035, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9, EX_CYCLES=3;   /* v5: tolerancia 0,035 (con 3x mas velocidad, ~27 ms de margen para el 100); EX_CYCLES = idas y vueltas antes de congelar solo */   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
+var EX_TOL=0.035, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9, EX_TOL_MS=27;   /* v6: SIN limite de idas y vueltas (sigue hasta pulsar STOP). Margen para el 100 en MILISEGUNDOS (EX_TOL_MS) para todos los ejercicios, a cualquier velocidad: tol de progreso = max(EX_TOL, EX_TOL_MS/duracion) */   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
 var EX_SPEED=3.0;   /* v5: 3.0 (v4: 2.0; v2: 1.5; v1: 1.0) */
 /* (hist.) v4: */    /* v4: 2.0 (v2: 1.5; v1: 1.0). Tolerancia 0,025 (v1 0,015; v2 0,02) para mantener unos 30 ms de margen para el 100 */
 /* (nota v2:) */    /* v2: factor de velocidad de TODOS los movimientos (1 = la de la v1; 1.5 = un 50 % mas rapido, duraciones /1,5) */
@@ -591,7 +591,8 @@ function drawRing(g,W,H,p,t){
   var cx=W/2, cy=H/2, R=Math.min(W,H)*0.37, at=-Math.PI/2+t*2*Math.PI, a=-Math.PI/2+p*2*Math.PI, k=W*0.07;
   g.strokeStyle='#333'; g.lineWidth=2; g.beginPath(); g.arc(cx,cy,R,0,6.2832); g.stroke();
   line2(g,cx+(R-k)*Math.cos(at),cy+(R-k)*Math.sin(at),cx+(R+k)*Math.cos(at),cy+(R+k)*Math.sin(at),'#222',3.2);
-  g.fillStyle='#fff'; g.strokeStyle='#E63312'; g.lineWidth=2.6; g.beginPath(); g.arc(cx+R*Math.cos(a),cy+R*Math.sin(a),W*0.065,0,6.2832); g.fill(); g.stroke();
+  g.fillStyle=C_RED; g.strokeStyle='#000'; g.lineWidth=2.4;   /* v6: bola ROJA llena con borde NEGRO */
+   g.beginPath(); g.arc(cx+R*Math.cos(a),cy+R*Math.sin(a),W*0.065,0,6.2832); g.fill(); g.stroke();
 }
 function drawSquares(g,W,H,p,t){
   var c=W/2, s0=W*0.86, s1=W*0.10, s=s0-(s0-s1)*p, st=s0-(s0-s1)*t, h=st/2, L=st*0.24;
@@ -601,18 +602,18 @@ function drawSquares(g,W,H,p,t){
 }
 /* nombre, duracion del movimiento (ms), objetivo (progreso 0..1), dibujo */
 var EXS=[
-  { name:'Barra',       dur:2300, tgt:1.00, draw:drawBar },   /* v5: objetivo arriba, en el final de la barra que asciende */
+  { name:'Barra',       dur:2300, tgt:1.00, k:1.4, draw:drawBar },   /* v5: objetivo arriba, en el final de la barra que asciende */
   { name:'Círculo', dur:2300, tgt:0.70, draw:drawCircle },
-  { name:'Franja',      dur:2200, tgt:0.62, draw:drawStrip },
+  { name:'Franja',      dur:2200, tgt:0.50, draw:drawStrip },   /* v6: objetivo en el CENTRO de la franja */
   { name:'Reloj',       dur:2900, tgt:0.75, draw:drawClock },
   { name:'Mira',        dur:2400, tgt:0.66, draw:drawCross },
   { name:'Semicírculo', dur:2400, tgt:0.50, draw:drawHalf },
-  { name:'Diagonal',    dur:2600, tgt:0.70, draw:drawDiag },
-  { name:'Aro',         dur:3000, tgt:0.50, draw:drawRing },
-  { name:'Cuadrados',   dur:2400, tgt:0.72, draw:drawSquares }
+  { name:'Diagonal',    dur:2600, tgt:0.70, k:1.4, draw:drawDiag },
+  { name:'Aro',         dur:3000, tgt:0.50, k:1.4, cyc:true, draw:drawRing },   /* v6: giro continuo (una vuelta = dur), siempre en el mismo sentido */
+  { name:'Cuadrados',   dur:2400, tgt:0.50, draw:drawSquares }   /* v6: objetivo en el centro del recorrido */
 ];
-EXS.forEach(function(x){ x.dur=Math.round(x.dur/EX_SPEED); });
-function exScore(dp){ dp=Math.abs(dp); return dp<=EX_TOL ? 100 : Math.max(0, Math.round(100*(1-(dp-EX_TOL)/EX_SPAN))); }
+EXS.forEach(function(x){ x.dur=Math.round(x.dur/(EX_SPEED*(x.k||1))); x.tol=Math.max(EX_TOL, EX_TOL_MS/x.dur); });   /* k = velocidad extra de esa celda */
+function exScore(dp,tol){ dp=Math.abs(dp); tol=(tol==null)?EX_TOL:tol; return dp<=tol ? 100 : Math.max(0, Math.round(100*(1-(dp-tol)/EX_SPAN))); }
 
 /* sonidos: pitido discreto al pulsar y logros con campanas suaves (notas que suben) segun la puntuacion */
 function sndStop(){ var c=audioCtx(); if(!c) return; tone('triangle',520,0,c.currentTime,0.05,0.16); }
@@ -694,20 +695,21 @@ function startEx(i){
   $('trialCount').textContent=(i+1)+'/'+EX_N;
   drawCell(i,0);
 }
-function triP(x){ var u=x%2; return u<=1 ? u : 2-u; }   /* v5: ida y vuelta: x = tiempo/duracion; p sube 0->1 y baja 1->0, y vuelta a empezar */
+function triP(x){ var u=x%2; return u<=1 ? u : 2-u; }
+function pOf(ex,ms){ var x=ms/ex.dur; return ex.cyc ? (x-Math.floor(x)) : triP(x); }   /* v6: 'cyc' = giro continuo en una sola direccion (el aro); el resto, ida y vuelta */
+function exErr(ex,p){ var d=Math.abs(p-ex.tgt); return ex.cyc ? Math.min(d,1-d) : d; }   /* v5: ida y vuelta: x = tiempo/duracion; p sube 0->1 y baja 1->0, y vuelta a empezar */
 function loop(){
   if(!S.running) return;
   var now=performance.now(); $('stTime').textContent=fmtTime(now-S.t0);
   if(!S.lock){
-    var ex=EXS[S.idx], ms=now-S.exStart, x=ms/ex.dur;
-    if(x>=2*EX_CYCLES){ stopEx(triP(2*EX_CYCLES), ms); }   /* nadie pulsa: tras EX_CYCLES idas y vueltas se congela solo (en el inicio) */
-    else { var p=triP(x); S.cellP[S.idx]=p; drawCell(S.idx,p); }
+    var ex=EXS[S.idx], ms=now-S.exStart, p=pOf(ex,ms);   /* v6: no hay fin de tiempo: el movimiento sigue y sigue hasta pulsar STOP */
+    S.cellP[S.idx]=p; drawCell(S.idx,p);
   }
   S.raf=requestAnimationFrame(loop);
 }
 function stopEx(p, ms){   /* congela el ejercicio actual con progreso p y puntua */
   if(!S.running || S.lock) return;
-  var i=S.idx, ex=EXS[i], sc=exScore(p-ex.tgt);
+  var i=S.idx, ex=EXS[i], sc=exScore(exErr(ex,p), ex.tol);
   S.lock=true; S.cellP[i]=p; drawCell(i,p);
   S.scores.push(sc); S.times.push(ms); S.pts+=sc; S.pressed++;
   var b=S.cells[i].querySelector('.cbadge'); b.textContent=String(sc); b.className='cbadge show'+(sc>=98?' ok':'');
@@ -720,7 +722,7 @@ function stopEx(p, ms){   /* congela el ejercicio actual con progreso p y puntua
 function onStop(e){
   if(e&&e.cancelable) e.preventDefault();
   if(!S.running || S.lock) return;
-  var now=performance.now(), ex=EXS[S.idx], ms=now-S.exStart, p=triP(ms/ex.dur);
+  var now=performance.now(), ex=EXS[S.idx], ms=now-S.exStart, p=pOf(ex,ms);
   stopEx(p, ms);
 }
 
