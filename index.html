@@ -375,7 +375,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v1</div>
+    <div class="app-ver">v2</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -540,7 +540,8 @@ var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,runnin
    el movimiento llega al final y se congela (puntua por ese error, normalmente 0). Se guarda tambien el TIEMPO de parada (ms desde que empieza el movimiento hasta STOP); la media es
    el desempate del ranking (puntos desc, media de parada asc).
    DECISIONES MIAS no confirmadas: objetivos, duraciones y la formula de puntos de cada ejercicio (el video no deja ver la regla exacta); STOP tambien se activa tocando el recuadro activo. */
-var EX_TOL=0.015, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9;
+var EX_TOL=0.02, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9;   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
+var EX_SPEED=1.5;   /* v2: factor de velocidad de TODOS los movimientos (1 = la de la v1; 1.5 = un 50 % mas rapido, duraciones /1,5) */
 function dpr0(){ return Math.min(3, Math.max(1, window.devicePixelRatio||1)); }
 function fillC(g,x,y,r,col){ g.fillStyle=col; g.beginPath(); g.arc(x,y,Math.max(0.1,r),0,6.2832); g.fill(); }
 function line2(g,x0,y0,x1,y1,col,lw){ g.strokeStyle=col; g.lineWidth=lw; g.lineCap='round'; g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke(); }
@@ -605,6 +606,7 @@ var EXS=[
   { name:'Aro',         dur:3000, tgt:0.50, draw:drawRing },
   { name:'Cuadrados',   dur:2400, tgt:0.72, draw:drawSquares }
 ];
+EXS.forEach(function(x){ x.dur=Math.round(x.dur/EX_SPEED); });
 function exScore(dp){ dp=Math.abs(dp); return dp<=EX_TOL ? 100 : Math.max(0, Math.round(100*(1-(dp-EX_TOL)/EX_SPAN))); }
 
 /* sonidos: pitido discreto al pulsar y logros con campanas suaves (notas que suben) segun la puntuacion */
