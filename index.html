@@ -375,7 +375,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v2</div>
+    <div class="app-ver">v3</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -577,10 +577,11 @@ function drawCross(g,W,H,p,t){
   fillC(g,px,py,W*0.045,'#E63312');
 }
 function drawDiag(g,W,H,p,t){
-  var m=W*0.14, x0=m, y0=m, x1=W-m, y1=H-m, L=0.22, o=W*0.045;
+  var m=W*0.14, x0=m, y0=m, x1=W-m, y1=H-m, L=0.22;
   line2(g,x0,y0,x1,y1,'#c9c9c9',2);
-  function seg(c,ox,oy,col){ var a=Math.max(0,c-L/2), b=Math.min(1,c+L/2); line2(g, x0+(x1-x0)*a+ox, y0+(y1-y0)*a+oy, x0+(x1-x0)*b+ox, y0+(y1-y0)*b+oy, col, 5); }
-  seg(t, o, -o, '#E63312'); seg(p, 0, 0, '#2DBE2D');
+  function seg(c,col,lw){ var a=Math.max(0,c-L/2), b=Math.min(1,c+L/2); line2(g, x0+(x1-x0)*a, y0+(y1-y0)*a, x0+(x1-x0)*b, y0+(y1-y0)*b, col, lw); }
+  /* v3: el objetivo (rojo, mas grueso) va SOBRE la misma linea por la que se desplaza el segmento verde (mas fino, encima): al acertar el verde queda dentro del rojo */
+  seg(t, '#E63312', 9); seg(p, '#2DBE2D', 4.5);
 }
 function drawRing(g,W,H,p,t){
   var cx=W/2, cy=H/2, R=Math.min(W,H)*0.37, at=-Math.PI/2+t*2*Math.PI, a=-Math.PI/2+p*2*Math.PI, k=W*0.07;
