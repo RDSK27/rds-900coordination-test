@@ -378,7 +378,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v13</div>
+    <div class="app-ver">v14</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -545,7 +545,7 @@ var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,runnin
    MODOS (v10): NORMAL = lo anterior (ida y vuelta, objetivo fijo; en las celdas 1 y 2 el objetivo es el extremo y no se dibuja). EXTREMO = el objetivo CAMBIA: se dibuja una linea roja en la 1 y un circulo
    rojo en la 2, en las demas cambia de sitio, y el objetivo vuelve a cambiar al azar tras cada IDA Y VUELTA completa (v12; antes cambiaba en cada tramo), o tras DOS vueltas en las celdas de giro (reloj, aro).
    LIMITE = el objetivo puede estar en CUALQUIER sitio (se dibuja en todas), UN SOLO CICLO (v13: una IDA Y VUELTA completa en las celdas lineales, o DOS vueltas en las de giro --reloj y aro--; despues se congela solo) y cada ejercicio debe sacar al menos LIM_MIN=90; con menos de 90 el
-   ejercicio se da por FALLADO: la partida TERMINA y NO SE GUARDA nada (pantalla Fallo; decision de Roberto, v11).
+   ejercicio se da por FALLADO: la partida TERMINA pero SE CONSERVA el resultado de los ejercicios anteriores (v14, decision de Roberto; en v11-v13 no se guardaba nada). El ejercicio fallado no suma.
    DECISIONES MIAS no confirmadas: objetivos, duraciones y la formula de puntos de cada ejercicio (el video no deja ver la regla exacta); STOP tambien se activa tocando el recuadro activo. */
 var EX_TOL=0.035, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9, EX_TOL_MS=12;   /* v9: el 100 solo con +-12 ms (v8: 27); Reloj y Mira +-8 ms (tolMs); SIN suelo de tolerancia: tol = ms/duracion */   /* (v8:) */   /* v6: SIN limite de idas y vueltas (sigue hasta pulsar STOP). Margen para el 100 en MILISEGUNDOS (EX_TOL_MS) para todos los ejercicios, a cualquier velocidad: tol de progreso = max(EX_TOL, EX_TOL_MS/duracion) */   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
 var LIM_MIN=90;   /* v10: Limite: puntuacion minima de cada ejercicio (90 vale) */
@@ -733,7 +733,7 @@ function stopEx(p, ms){   /* congela el ejercicio actual con progreso p y puntua
   var b=S.cells[i].querySelector('.cbadge'); b.textContent=String(sc); b.className='cbadge show'+(sc>=100?' ok':(fail?' bad':''));
   S.cells[i].classList.remove('act'); if(sc>=100) S.cells[i].classList.add('perfect');
   $('stAvg').textContent=String(S.pts); $('stLast').textContent=String(sc); setProgress(S.pressed/EX_N);
-  if(fail){ S.failAt=i; sndFail(); S.nextTo=setTimeout(function(){ S.nextTo=0; failNormal('Fallo en el ejercicio '+(i+1)+' ('+sc+' puntos). En L\u00edmite cada ejercicio debe sacar al menos '+LIM_MIN+'; la partida termina y no se guarda.', true); }, 1000); return; }   /* Limite: menos de 90 = FALLADO, fin de partida y NO se guarda */
+  if(fail){ S.failAt=i; sndFail(); S.nextTo=setTimeout(function(){ S.nextTo=0; finishRun('fail'); }, 1000); return; }   /* v14: Limite: menos de 90 = FALLADO, fin de partida pero SE GUARDA lo conseguido hasta ese ejercicio */
   sndScore(sc);
   if(S.pressed>=EX_N){ S.nextTo=setTimeout(function(){ S.nextTo=0; finishRun(); }, 900); }
   else { S.nextTo=setTimeout(function(){ S.nextTo=0; if(S.running) startEx(i+1); }, EX_PAUSE_MS); }
