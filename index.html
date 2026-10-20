@@ -199,6 +199,9 @@ if('serviceWorker' in navigator){
   .cbadge{position:absolute;left:4px;top:4px;min-width:22px;height:20px;padding:0 5px;border-radius:10px;background:#333;color:#fff;font-weight:800;font-size:12px;line-height:20px;text-align:center;display:none;font-family:Arial,Helvetica,sans-serif;}
   .cbadge.show{display:block;}
   .cbadge.ok{background:#2DBE2D;}
+  .cbadge.bad{background:#b03020;}
+  /* v10: solo hay 3 botones de modo (Normal/Extremo/Limite): las filas 2 y 3 de la plantilla se ocultan (valores fijos 'a') */
+  #segEstimulo,#segEnsayos,#segEstR,#segEnsR{display:none !important;}
   .stop-row{flex:none;padding:2px 6px 0;}
   #btnStop{display:block;width:100%;height:62px;border:0;border-radius:10px;background:var(--rojo);color:#fff;font-family:inherit;font-weight:900;font-size:24px;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;touch-action:manipulation;box-shadow:inset 0 2px 4px rgba(255,255,255,0.28), inset 0 -3px 6px rgba(0,0,0,0.45);-webkit-user-select:none;user-select:none;}
   #btnStop:active{transform:translateY(2px);filter:brightness(.9);}
@@ -312,8 +315,8 @@ if('serviceWorker' in navigator){
 
     <div class="segment" id="segModo">
       <button class="sel" data-v="normal">Normal</button>
-      <button data-v="extremo" data-soon="1">Extremo</button>
-      <button data-v="limite" data-soon="1">L&#237;mite</button>
+      <button data-v="extremo">Extremo</button>
+      <button data-v="limite">L&#237;mite</button>
     </div>
 
     <div class="segment" id="segEstimulo">
@@ -375,7 +378,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v9</div>
+    <div class="app-ver">v10</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -457,8 +460,8 @@ if('serviceWorker' in navigator){
       <div class="rank-screen-title">Ranking completo</div>
       <div class="rank-tabs" id="segModoR">
         <button class="rank-tab" data-v="normal">Normal</button>
-        <button class="rank-tab" data-v="extremo" data-soon="1">Extremo</button>
-        <button class="rank-tab" data-v="limite" data-soon="1">L&#237;mite</button>
+        <button class="rank-tab" data-v="extremo">Extremo</button>
+        <button class="rank-tab" data-v="limite">L&#237;mite</button>
       </div>
       <div class="rank-tabs" id="segEstR" style="margin-top:8px;">
         <button class="rank-tab" data-v="a">?</button>
@@ -530,7 +533,7 @@ function seg(id){
 function selVal(id){ var b=$(id).querySelector('button.sel'); return b?b.getAttribute('data-v'):null; }
 
 var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,running:false,raf:0,lock:true,countIv:0,coverTo:0,nextTo:0,resEnsayos:0,pressed:0,saved:null,
-  idx:0,exStart:0,scores:[],cellP:[],pts:0,cells:[],cvs:[],dpr:1};
+  idx:0,exStart:0,scores:[],cellP:[],cellT:[],tgt:0,leg:0,showT:false,failAt:-1,pts:0,cells:[],cvs:[],dpr:1};
 
 /* ---------- 900 COORDINATION (2026-10-20) ----------
    Rejilla 3x3 de ejercicios que se juegan UNO DETRAS DE OTRO (izquierda->derecha, arriba->abajo), como en el video de Roberto. En cada uno hay un movimiento que avanza solo
@@ -539,8 +542,13 @@ var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,runnin
    Error = |p - objetivo| con p = progreso del movimiento (0..1) y duracion fija por ejercicio: 100 si el error <= EX_TOL; baja linealmente hasta 0 a EX_TOL+EX_SPAN. v6: el movimiento va y VUELVE sin fin hasta pulsar STOP (sin limite de idas y vueltas); el aro gira siempre en el mismo sentido; celdas 1, 7 y 8 mas rapidas (k=1.4). v1-v4: Si no se pulsaba a tiempo
    el movimiento llega al final y se congela (puntua por ese error, normalmente 0). Se guarda tambien el TIEMPO de parada (ms desde que empieza el movimiento hasta STOP); la media es
    el desempate del ranking (puntos desc, media de parada asc).
+   MODOS (v10): NORMAL = lo anterior (ida y vuelta, objetivo fijo; en las celdas 1 y 2 el objetivo es el extremo y no se dibuja). EXTREMO = el objetivo CAMBIA: se dibuja una linea roja en la 1 y un circulo
+   rojo en la 2, en las demas cambia de sitio, y cada vez que el movimiento llega a un limite (inferior o superior; en las celdas de giro, al completar cada vuelta) el objetivo vuelve a cambiar al azar.
+   LIMITE = el objetivo puede estar en CUALQUIER sitio (se dibuja en todas), un UNICO movimiento (solo la ida, sin vuelta) y cada ejercicio debe sacar al menos LIM_MIN=90; con menos de 90 el
+   ejercicio se da por FALLADO y acaba la partida con los puntos de los ejercicios anteriores (decision mia: el ejercicio fallado no suma).
    DECISIONES MIAS no confirmadas: objetivos, duraciones y la formula de puntos de cada ejercicio (el video no deja ver la regla exacta); STOP tambien se activa tocando el recuadro activo. */
 var EX_TOL=0.035, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9, EX_TOL_MS=12;   /* v9: el 100 solo con +-12 ms (v8: 27); Reloj y Mira +-8 ms (tolMs); SIN suelo de tolerancia: tol = ms/duracion */   /* (v8:) */   /* v6: SIN limite de idas y vueltas (sigue hasta pulsar STOP). Margen para el 100 en MILISEGUNDOS (EX_TOL_MS) para todos los ejercicios, a cualquier velocidad: tol de progreso = max(EX_TOL, EX_TOL_MS/duracion) */   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
+var LIM_MIN=90;   /* v10: Limite: puntuacion minima de cada ejercicio (90 vale) */
 var EX_SPEED=3.0;   /* v5: 3.0 (v4: 2.0; v2: 1.5; v1: 1.0) */
 /* (hist.) v4: */    /* v4: 2.0 (v2: 1.5; v1: 1.0). Tolerancia 0,025 (v1 0,015; v2 0,02) para mantener unos 30 ms de margen para el 100 */
 /* (nota v2:) */    /* v2: factor de velocidad de TODOS los movimientos (1 = la de la v1; 1.5 = un 50 % mas rapido, duraciones /1,5) */
@@ -548,14 +556,15 @@ function dpr0(){ return Math.min(3, Math.max(1, window.devicePixelRatio||1)); }
 function fillC(g,x,y,r,col){ g.fillStyle=col; g.beginPath(); g.arc(x,y,Math.max(0.1,r),0,6.2832); g.fill(); }
 function line2(g,x0,y0,x1,y1,col,lw){ g.strokeStyle=col; g.lineWidth=lw; g.lineCap='round'; g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke(); }
 var C_RED='#E63312', C_AMB='#F5A623', C_YEL='#FFE680';
-function drawBar(g,W,H,p,t){
+function drawBar(g,W,H,p,t,show){
   var m=H*0.07, hmax=H-2*m, bw=W*0.26, x=(W-bw)/2, base=H-m;
   var gr=g.createLinearGradient(0,base-hmax,0,base); gr.addColorStop(0,C_YEL); gr.addColorStop(1,C_AMB);   /* v5: barra AMARILLA como el resto de moviles */
   g.fillStyle=gr; g.fillRect(x, base-p*hmax, bw, Math.max(1,p*hmax));
-  /* v8: SIN marca de objetivo: el objetivo es el extremo (el tope de la barra) pero no se dibuja */
+  if(show) line2(g, W*0.20, base-t*hmax, W*0.80, base-t*hmax, C_RED, 3.2);   /* v10: en Extremo/Limite SE DIBUJA la linea roja; en Normal el objetivo es el tope y no se muestra */
 }
-function drawCircle(g,W,H,p,t){
-  var cx=W/2, cy=H/2, R=Math.min(W,H)*0.47; fillC(g,cx,cy,p*R,'#F5A623');   /* v8: SIN anillo: el objetivo es el borde exterior (maximo del circulo) y no se dibuja */
+function drawCircle(g,W,H,p,t,show){
+  var cx=W/2, cy=H/2, R=Math.min(W,H)*0.47; fillC(g,cx,cy,p*R,'#F5A623');
+  if(show){ g.strokeStyle=C_RED; g.lineWidth=2.8; g.beginPath(); g.arc(cx,cy,t*R,0,6.2832); g.stroke(); }   /* v10: en Extremo/Limite SE DIBUJA el circulo rojo; en Normal el objetivo es el borde exterior y no se muestra */
 }
 function drawStrip(g,W,H,p,t){
   var m=W*0.08, wi=W-2*m, bh=H*0.38, y=(H-bh)/2, gr=g.createLinearGradient(0,y,0,y+bh); gr.addColorStop(0,'#FFE680'); gr.addColorStop(1,'#F5A623');
@@ -654,14 +663,14 @@ function gFit(){   /* panel cuadrado: lado = el menor entre ancho y alto disponi
 window.addEventListener('resize', gFit); window.addEventListener('orientationchange', function(){ setTimeout(gFit,200); });
 function drawCell(i,p){
   var cv=S.cvs[i]; if(!cv) return; var g=cv.getContext('2d'), W=cv.width/S.dpr, H=cv.height/S.dpr;
-  g.setTransform(S.dpr,0,0,S.dpr,0,0); g.clearRect(0,0,W,H); EXS[i].draw(g,W,H,p,EXS[i].tgt);
+  g.setTransform(S.dpr,0,0,S.dpr,0,0); g.clearRect(0,0,W,H); EXS[i].draw(g,W,H,p,(S.cellT[i]!=null?S.cellT[i]:EXS[i].tgt),S.showT);
 }
 function gBuild(){
   var html='', k;
   for(k=0;k<EX_N;k++){ html+='<div class="cell9" data-i="'+k+'"><canvas></canvas><div class="cbadge"></div></div>'; }
   $('grid').innerHTML=html;
   S.cells=[].slice.call($('grid').querySelectorAll('.cell9')); S.cvs=S.cells.map(function(c){ return c.querySelector('canvas'); });
-  S.cellP=[]; for(k=0;k<EX_N;k++){ S.cellP.push(null); }
+  S.cellP=[]; S.cellT=[]; for(k=0;k<EX_N;k++){ S.cellP.push(null); S.cellT.push(null); }
   gFit(); setTimeout(gFit,0); setTimeout(gFit,300);
 }
 
@@ -671,7 +680,7 @@ function runGame(){
   if(S.nextTo){ clearTimeout(S.nextTo); S.nextTo=0; }
   cancelAnimationFrame(S.raf);
   show('game');
-  S.times=[]; S.scores=[]; S.pts=0; S.pressed=0; S.idx=0; S.running=false; S.lock=true; S.saved=null; S.resEnsayos=0;
+  S.times=[]; S.scores=[]; S.pts=0; S.pressed=0; S.idx=0; S.running=false; S.lock=true; S.saved=null; S.resEnsayos=0; S.failAt=-1; S.showT=(S.mode!=='normal');
   gBuild();
   $('stAvgK').textContent='Puntos'; $('stAvg').textContent='0'; $('stLastK').textContent='Último'; $('stLast').textContent='--';
   $('stTrialK').textContent='Ejercicio'; $('trialCount').textContent='0/'+EX_N; $('stTimeK').textContent='Tiempo'; $('stTime').textContent='0:00.00'; setProgress(0);
@@ -688,32 +697,43 @@ function beginPlay(){
   startEx(0);
   S.raf=requestAnimationFrame(loop);
 }
+function randTgt(i,prev){   /* objetivo al azar (Extremo: 0,20-0,90; Limite: 0,12-0,95), distinto del anterior */
+  var lo=(S.mode==='limite')?0.12:0.20, hi=(S.mode==='limite')?0.95:0.90, t, k=0;
+  do{ t=lo+Math.random()*(hi-lo); k++; }while(prev!=null && Math.abs(t-prev)<0.15 && k<30);
+  return Math.round(t*100)/100;
+}
 function startEx(i){
-  S.idx=i; S.exStart=performance.now(); S.lock=false; S.cellP[i]=0;
+  S.idx=i; S.exStart=performance.now(); S.lock=false; S.cellP[i]=0; S.leg=0;
+  S.tgt=(S.mode==='normal') ? EXS[i].tgt : randTgt(i,null); S.cellT[i]=S.tgt;
   S.cells.forEach(function(c,k){ c.classList.toggle('act', k===i); });
   $('trialCount').textContent=(i+1)+'/'+EX_N;
   drawCell(i,0);
 }
 function triP(x){ var u=x%2; return u<=1 ? u : 2-u; }
-function pOf(ex,ms){ var x=ms/ex.dur; return ex.cyc ? (x-Math.floor(x)) : triP(x); }   /* v6: 'cyc' = giro continuo en una sola direccion (el aro); el resto, ida y vuelta */
-function exErr(ex,p){ var d=Math.abs(p-ex.tgt); return ex.cyc ? Math.min(d,1-d) : d; }   /* v5: ida y vuelta: x = tiempo/duracion; p sube 0->1 y baja 1->0, y vuelta a empezar */
+function pOf(ex,ms){ var x=ms/ex.dur; if(S.mode==='limite') return Math.min(1,x); return ex.cyc ? (x-Math.floor(x)) : triP(x); }   /* v10: Limite = solo la IDA (un unico movimiento, sin vuelta) */   /* v6: 'cyc' = giro continuo en una sola direccion (el aro); el resto, ida y vuelta */
+function exErr(ex,p){ var d=Math.abs(p-S.tgt); return (ex.cyc && S.mode!=='limite') ? Math.min(d,1-d) : d; }   /* v5: ida y vuelta: x = tiempo/duracion; p sube 0->1 y baja 1->0, y vuelta a empezar */
 function loop(){
   if(!S.running) return;
   var now=performance.now(); $('stTime').textContent=fmtTime(now-S.t0);
   if(!S.lock){
-    var ex=EXS[S.idx], ms=now-S.exStart, p=pOf(ex,ms);   /* v6: no hay fin de tiempo: el movimiento sigue y sigue hasta pulsar STOP */
-    S.cellP[S.idx]=p; drawCell(S.idx,p);
+    var ex=EXS[S.idx], ms=now-S.exStart, x=ms/ex.dur;
+    if(S.mode==='limite' && x>=1){ stopEx(1, ms); }   /* un solo movimiento: si llega al final sin pulsar se congela y puntua por ese error */
+    else {
+      if(S.mode==='extremo'){ var leg=Math.floor(x); if(leg!==S.leg){ S.leg=leg; S.tgt=randTgt(S.idx,S.tgt); S.cellT[S.idx]=S.tgt; } }   /* v10: en cada limite (inferior/superior o vuelta completa) el objetivo cambia */
+      var p=pOf(ex,ms); S.cellP[S.idx]=p; drawCell(S.idx,p);
+    }
   }
   S.raf=requestAnimationFrame(loop);
 }
 function stopEx(p, ms){   /* congela el ejercicio actual con progreso p y puntua */
   if(!S.running || S.lock) return;
-  var i=S.idx, ex=EXS[i], sc=exScore(exErr(ex,p), ex.tol);
+  var i=S.idx, ex=EXS[i], sc=exScore(exErr(ex,p), ex.tol), fail=(S.mode==='limite' && sc<LIM_MIN);
   S.lock=true; S.cellP[i]=p; drawCell(i,p);
-  S.scores.push(sc); S.times.push(ms); S.pts+=sc; S.pressed++;
-  var b=S.cells[i].querySelector('.cbadge'); b.textContent=String(sc); b.className='cbadge show'+(sc>=100?' ok':'');
+  S.scores.push(sc); S.times.push(ms); if(!fail) S.pts+=sc; S.pressed++;
+  var b=S.cells[i].querySelector('.cbadge'); b.textContent=String(sc); b.className='cbadge show'+(sc>=100?' ok':(fail?' bad':''));
   S.cells[i].classList.remove('act'); if(sc>=100) S.cells[i].classList.add('perfect');
   $('stAvg').textContent=String(S.pts); $('stLast').textContent=String(sc); setProgress(S.pressed/EX_N);
+  if(fail){ S.failAt=i; sndFail(); S.nextTo=setTimeout(function(){ S.nextTo=0; finishRun('fail'); }, 1000); return; }   /* Limite: menos de 90 = ejercicio FALLADO, acaba la partida */
   sndScore(sc);
   if(S.pressed>=EX_N){ S.nextTo=setTimeout(function(){ S.nextTo=0; finishRun(); }, 900); }
   else { S.nextTo=setTimeout(function(){ S.nextTo=0; if(S.running) startEx(i+1); }, EX_PAUSE_MS); }
@@ -745,20 +765,22 @@ function renderBars(scores){   /* grafico de los 9 ejercicios: una barra por pun
   }
   box.innerHTML=s+'</svg>';
 }
-function finishRun(){
+function finishRun(reason){
   S.running=false; S.lock=true; cancelAnimationFrame(S.raf);
   var total=performance.now()-S.t0, n=S.times.length, sum=0, i, best=0; for(i=0;i<n;i++){ sum+=S.times[i]; if(S.scores[i]>best) best=S.scores[i]; }
   var avg=n?sum/n:0;
   $('rK1').textContent='Puntos'; $('rK2').textContent='de 900'; $('rK3').textContent='Parada media (ms)'; $('rK4').textContent='Mejor ejercicio';
-  $('resMsg').style.display='none'; $('resEns').style.display='none';
+  var failed=(reason==='fail');
+  if(failed){ $('resMsg').textContent='Fallo en el ejercicio '+(S.failAt+1)+' ('+S.scores[S.failAt]+' puntos): en L\u00edmite cada ejercicio debe sacar al menos '+LIM_MIN; $('resMsg').style.display='block'; } else { $('resMsg').style.display='none'; }
+  $('resEns').style.display='none';
   $('rAvg').textContent=String(S.pts);
   $('rTime').textContent=fmtTime(total);
   $('rBest').textContent=String(Math.round(avg));
   $('rWorst').textContent=String(best);
-  S.resAvg=avg; S.resTotal=total; S.resEnsayos=S.pts; S.saved=false;
+  S.resAvg=avg; S.resTotal=total; S.resEnsayos=S.pts; S.saved=(failed && S.pts===0) ? null : false;   /* sin ningun ejercicio valido no hay nada que guardar */
   renderBars(S.scores);
-  var gb=$('btnGuardar'); if(gb){ gb.disabled=false; gb.textContent='Guardar resultado'; }
-  sndFinal(S.pts);
+  var gb=$('btnGuardar'); if(gb){ gb.disabled=(failed && S.pts===0); gb.textContent='Guardar resultado'; }
+  if(!failed) sndFinal(S.pts);
   showSaveScreen();
 }
 
