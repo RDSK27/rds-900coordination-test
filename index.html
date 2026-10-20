@@ -375,7 +375,7 @@ if('serviceWorker' in navigator){
       </select>
     </div>
   </div>
-    <div class="app-ver">v4</div>
+    <div class="app-ver">v5</div>
     <div id="pending-sync" class="pending-sync"></div>
     </div>
 
@@ -536,20 +536,23 @@ var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,runnin
    Rejilla 3x3 de ejercicios que se juegan UNO DETRAS DE OTRO (izquierda->derecha, arriba->abajo), como en el video de Roberto. En cada uno hay un movimiento que avanza solo
    (barra que crece, circulo que crece, franja, sector tipo reloj, punto hacia una mira, semicirculo, segmento por una diagonal, bola por un aro, cuadrado que se encoge) y una
    MARCA (objetivo). Se pulsa STOP para congelarlo lo mas cerca posible de la marca: puntuacion 0-100 por ejercicio (100 = clavado, suena un sonido de logro) y 9 x 100 = 900.
-   Error = |p - objetivo| con p = progreso del movimiento (0..1) y duracion fija por ejercicio: 100 si el error <= EX_TOL; baja linealmente hasta 0 a EX_TOL+EX_SPAN. Si no se pulsa a tiempo
+   Error = |p - objetivo| con p = progreso del movimiento (0..1) y duracion fija por ejercicio: 100 si el error <= EX_TOL; baja linealmente hasta 0 a EX_TOL+EX_SPAN. v5: el movimiento va y VUELVE (ida y vuelta, sin fin hasta pulsar STOP; tras EX_CYCLES=3 idas y vueltas se congela solo y puntua por ese error). v1-v4: Si no se pulsaba a tiempo
    el movimiento llega al final y se congela (puntua por ese error, normalmente 0). Se guarda tambien el TIEMPO de parada (ms desde que empieza el movimiento hasta STOP); la media es
    el desempate del ranking (puntos desc, media de parada asc).
    DECISIONES MIAS no confirmadas: objetivos, duraciones y la formula de puntos de cada ejercicio (el video no deja ver la regla exacta); STOP tambien se activa tocando el recuadro activo. */
-var EX_TOL=0.025, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9;   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
-var EX_SPEED=2.0;   /* v4: 2.0 (v2: 1.5; v1: 1.0). Tolerancia 0,025 (v1 0,015; v2 0,02) para mantener unos 30 ms de margen para el 100 */
+var EX_TOL=0.035, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9, EX_CYCLES=3;   /* v5: tolerancia 0,035 (con 3x mas velocidad, ~27 ms de margen para el 100); EX_CYCLES = idas y vueltas antes de congelar solo */   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
+var EX_SPEED=3.0;   /* v5: 3.0 (v4: 2.0; v2: 1.5; v1: 1.0) */
+/* (hist.) v4: */    /* v4: 2.0 (v2: 1.5; v1: 1.0). Tolerancia 0,025 (v1 0,015; v2 0,02) para mantener unos 30 ms de margen para el 100 */
 /* (nota v2:) */    /* v2: factor de velocidad de TODOS los movimientos (1 = la de la v1; 1.5 = un 50 % mas rapido, duraciones /1,5) */
 function dpr0(){ return Math.min(3, Math.max(1, window.devicePixelRatio||1)); }
 function fillC(g,x,y,r,col){ g.fillStyle=col; g.beginPath(); g.arc(x,y,Math.max(0.1,r),0,6.2832); g.fill(); }
 function line2(g,x0,y0,x1,y1,col,lw){ g.strokeStyle=col; g.lineWidth=lw; g.lineCap='round'; g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke(); }
+var C_RED='#E63312', C_AMB='#F5A623', C_YEL='#FFE680';
 function drawBar(g,W,H,p,t){
   var m=H*0.10, hmax=H-2*m, bw=W*0.26, x=(W-bw)/2, base=H-m;
-  g.fillStyle='#E63312'; g.fillRect(x, base-p*hmax, bw, Math.max(1,p*hmax));
-  line2(g, W*0.24, base-t*hmax, W*0.76, base-t*hmax, '#222', 3);
+  var gr=g.createLinearGradient(0,base-hmax,0,base); gr.addColorStop(0,C_YEL); gr.addColorStop(1,C_AMB);   /* v5: barra AMARILLA como el resto de moviles */
+  g.fillStyle=gr; g.fillRect(x, base-p*hmax, bw, Math.max(1,p*hmax));
+  line2(g, W*0.20, base-t*hmax, W*0.80, base-t*hmax, C_RED, 3.2);   /* objetivo: marca ROJA arriba, en el final del recorrido */
 }
 function drawCircle(g,W,H,p,t){
   var cx=W/2, cy=H/2, R=Math.min(W,H)*0.44; fillC(g,cx,cy,p*R,'#F5A623');
@@ -592,13 +595,13 @@ function drawRing(g,W,H,p,t){
 }
 function drawSquares(g,W,H,p,t){
   var c=W/2, s0=W*0.86, s1=W*0.10, s=s0-(s0-s1)*p, st=s0-(s0-s1)*t, h=st/2, L=st*0.24;
-  g.fillStyle='rgba(230,51,18,0.95)'; g.fillRect(c-s/2,c-s/2,s,s);
-  g.strokeStyle='#2DBE2D'; g.lineWidth=4; g.lineCap='square';
+  var gq=g.createLinearGradient(0,c-s/2,0,c+s/2); gq.addColorStop(0,C_YEL); gq.addColorStop(1,C_AMB); g.fillStyle=gq; g.fillRect(c-s/2,c-s/2,s,s);   /* v5: cuadrado AMBAR; esquinas objetivo ROJAS (misma paleta que el resto) */
+  g.strokeStyle=C_RED; g.lineWidth=4; g.lineCap='square';
   [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(function(q){ var x=c+q[0]*h, y=c+q[1]*h; g.beginPath(); g.moveTo(x-q[0]*L,y); g.lineTo(x,y); g.lineTo(x,y-q[1]*L); g.stroke(); });
 }
 /* nombre, duracion del movimiento (ms), objetivo (progreso 0..1), dibujo */
 var EXS=[
-  { name:'Barra',       dur:2300, tgt:0.78, draw:drawBar },
+  { name:'Barra',       dur:2300, tgt:1.00, draw:drawBar },   /* v5: objetivo arriba, en el final de la barra que asciende */
   { name:'Círculo', dur:2300, tgt:0.70, draw:drawCircle },
   { name:'Franja',      dur:2200, tgt:0.62, draw:drawStrip },
   { name:'Reloj',       dur:2900, tgt:0.75, draw:drawClock },
@@ -691,13 +694,14 @@ function startEx(i){
   $('trialCount').textContent=(i+1)+'/'+EX_N;
   drawCell(i,0);
 }
+function triP(x){ var u=x%2; return u<=1 ? u : 2-u; }   /* v5: ida y vuelta: x = tiempo/duracion; p sube 0->1 y baja 1->0, y vuelta a empezar */
 function loop(){
   if(!S.running) return;
   var now=performance.now(); $('stTime').textContent=fmtTime(now-S.t0);
   if(!S.lock){
-    var ex=EXS[S.idx], p=(now-S.exStart)/ex.dur;
-    if(p>=1){ stopEx(1, ex.dur); }
-    else { S.cellP[S.idx]=p; drawCell(S.idx,p); }
+    var ex=EXS[S.idx], ms=now-S.exStart, x=ms/ex.dur;
+    if(x>=2*EX_CYCLES){ stopEx(triP(2*EX_CYCLES), ms); }   /* nadie pulsa: tras EX_CYCLES idas y vueltas se congela solo (en el inicio) */
+    else { var p=triP(x); S.cellP[S.idx]=p; drawCell(S.idx,p); }
   }
   S.raf=requestAnimationFrame(loop);
 }
@@ -716,7 +720,7 @@ function stopEx(p, ms){   /* congela el ejercicio actual con progreso p y puntua
 function onStop(e){
   if(e&&e.cancelable) e.preventDefault();
   if(!S.running || S.lock) return;
-  var now=performance.now(), ex=EXS[S.idx], ms=now-S.exStart, p=Math.min(1, ms/ex.dur);
+  var now=performance.now(), ex=EXS[S.idx], ms=now-S.exStart, p=triP(ms/ex.dur);
   stopEx(p, ms);
 }
 
