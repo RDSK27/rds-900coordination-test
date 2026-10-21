@@ -337,7 +337,7 @@ if('serviceWorker' in navigator){
           <button class="start-btn rank-btn" ontouchend="event.stopPropagation();" onclick="showRanking()" aria-label="Ranking"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 13.5v7.5M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></svg></button>
         </div>
       </div>
-  <div class="app-ver" style="margin-top:6px;padding-top:0;">v24</div>
+  <div class="app-ver" style="margin-top:6px;padding-top:0;">v25</div>
   <div id="user-name-bar" style="margin-top:8px;">
     <div style="display:flex;width:200px;gap:0;margin:0 auto;">
       <input id="user-ini-input" type="text" maxlength="3" placeholder="INI"
@@ -710,7 +710,8 @@ function rnd(a,b){ return a+Math.random()*(b-a); }
 function r2(x){ return Math.round(x*100)/100; }
 /* v24: velocidad por modo. Normal y Extremo van EX_MODE_SPEED veces mas rapidos que la base (Limite no cambia). La tolerancia del 100 sigue en ms (EX_TOL_MS), asi que no se regala ni se quita margen temporal. */
 var EX_MODE_SPEED=1.4;
-function applyModeSpeed(){ var mf=(S.mode==='normal'||S.mode==='extremo')?EX_MODE_SPEED:1; EXS.forEach(function(x){ if(x.dur0==null) x.dur0=x.dur; x.dur=Math.round(x.dur0/mf); x.tol=(x.tolMs||EX_TOL_MS)/x.dur; }); }
+var EX_SLOW=[0,7];   /* v25: celdas 1 (Barra) y 8 (Aro) conservan la velocidad de la v23 tambien en Normal y Extremo */
+function applyModeSpeed(){ var fast=(S.mode==='normal'||S.mode==='extremo'); EXS.forEach(function(x,i){ var mf=(fast && EX_SLOW.indexOf(i)<0)?EX_MODE_SPEED:1; if(x.dur0==null) x.dur0=x.dur; x.dur=Math.round(x.dur0/mf); x.tol=(x.tolMs||EX_TOL_MS)/x.dur; }); }
 function makePlan(){
   var ini=[0,0,0].map(function(){ return r2(rnd(0.15,0.30)); }), cen=[0,0,0].map(function(){ return r2(rnd(0.42,0.58)); }), fin=ini.map(function(x){ return r2(1-x); });
   var zs=[].concat(ini,cen,fin), i, j, t;
