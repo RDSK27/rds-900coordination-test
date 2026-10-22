@@ -202,7 +202,7 @@ if('serviceWorker' in navigator){
   .cbadge.bad{background:#b03020;}
   /* v10: solo hay 3 botones de modo (Normal/Extremo/Limite): las filas 2 y 3 de la plantilla se ocultan (valores fijos 'a') */
   #segEstimulo,#segEnsayos,#segEstR,#segEnsR{display:none !important;}
-  .stop-row{flex:none;text-align:center;color:#fff;font-weight:800;font-size:15px;letter-spacing:0.06em;padding:12px 6px 8px;opacity:.9;-webkit-user-select:none;user-select:none;}
+  .stop-row{flex:none;text-align:center;color:#b03020;font-weight:800;font-size:15px;letter-spacing:0.06em;padding:12px 6px 8px;opacity:.9;-webkit-user-select:none;user-select:none;}
   .sq-count{position:absolute;left:0;right:0;top:50%;margin-top:-70px;text-align:center;color:var(--rojo);font-weight:900;font-size:130px;line-height:1;-webkit-text-stroke:4px #fff;paint-order:stroke fill;pointer-events:none;z-index:5;}   /* rojo con borde blanco: se ve sobre blanco y sobre negro */
   .segment button[data-soon],.rank-tab[data-soon]{opacity:.38;cursor:default;}
   .segment.off,.rank-tabs.off{opacity:.35;pointer-events:none;}   /* Limite: Eliminar/Renovar y x1/x2/x4 no aplican */
@@ -337,7 +337,7 @@ if('serviceWorker' in navigator){
           <button class="start-btn rank-btn" ontouchend="event.stopPropagation();" onclick="showRanking()" aria-label="Ranking"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 13.5v7.5M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></svg></button>
         </div>
       </div>
-  <div class="app-ver" style="margin-top:6px;padding-top:0;">v25</div>
+  <div class="app-ver" style="margin-top:6px;padding-top:0;">v26</div>
   <div id="user-name-bar" style="margin-top:8px;">
     <div style="display:flex;width:200px;gap:0;margin:0 auto;">
       <input id="user-ini-input" type="text" maxlength="3" placeholder="INI"
@@ -545,7 +545,7 @@ var S={mode:'normal',stim:'a',total:'a',name:'RDS',sport:'',times:[],t0:0,runnin
    LIMITE = el objetivo puede estar en CUALQUIER sitio (se dibuja en todas), UN SOLO CICLO (v13: una IDA Y VUELTA completa en las celdas lineales, o DOS vueltas en las de giro --reloj y aro--; despues se congela solo) y cada ejercicio debe sacar al menos LIM_MIN=90; con menos de 90 el
    ejercicio se da por FALLADO: la partida TERMINA pero SE CONSERVA el resultado de los ejercicios anteriores (v14, decision de Roberto; en v11-v13 no se guardaba nada). El ejercicio fallado no suma.
    DECISIONES MIAS no confirmadas: objetivos, duraciones y la formula de puntos de cada ejercicio (el video no deja ver la regla exacta); STOP tambien se activa tocando el recuadro activo. */
-var EX_TOL=0.035, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9, EX_TOL_MS=12;   /* v9: el 100 solo con +-12 ms (v8: 27); Reloj y Mira +-8 ms (tolMs); SIN suelo de tolerancia: tol = ms/duracion */   /* (v8:) */   /* v6: SIN limite de idas y vueltas (sigue hasta pulsar STOP). Margen para el 100 en MILISEGUNDOS (EX_TOL_MS) para todos los ejercicios, a cualquier velocidad: tol de progreso = max(EX_TOL, EX_TOL_MS/duracion) */   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
+var EX_TOL=0.035, EX_SPAN=0.22, EX_PAUSE_MS=700, EX_N=9, EX_TOL_MS=12;   /* v26: el 100 exige ademas que la distancia VISUAL al objetivo sea menor que EX_TOL_VIS (fraccion del lado de la celda, ~3,7 px en una celda de 150 px): si no, en celdas con mucho recorrido (aro, reloj) +-12 ms eran varios pixeles */   var EX_TOL_VIS=0.025;   /* v9: el 100 solo con +-12 ms (v8: 27); Reloj y Mira +-8 ms (tolMs); SIN suelo de tolerancia: tol = ms/duracion */   /* (v8:) */   /* v6: SIN limite de idas y vueltas (sigue hasta pulsar STOP). Margen para el 100 en MILISEGUNDOS (EX_TOL_MS) para todos los ejercicios, a cualquier velocidad: tol de progreso = max(EX_TOL, EX_TOL_MS/duracion) */   /* v2: tolerancia 0,02 (antes 0,015) porque con mas velocidad la misma tolerancia en ms seria demasiado exigente */
 var LIM_MIN=90;   /* v10: Limite: puntuacion minima de cada ejercicio (90 vale) */
 var EX_SPEED=3.0;   /* v5: 3.0 (v4: 2.0; v2: 1.5; v1: 1.0) */
 /* (hist.) v4: */    /* v4: 2.0 (v2: 1.5; v1: 1.0). Tolerancia 0,025 (v1 0,015; v2 0,02) para mantener unos 30 ms de margen para el 100 */
@@ -596,9 +596,9 @@ function drawDiag(g,W,H,p,t){
 function drawRing(g,W,H,p,t){
   var cx=W/2, cy=H/2, R=Math.min(W,H)*0.37, at=-Math.PI/2+t*2*Math.PI, a=-Math.PI/2+p*2*Math.PI, k=W*0.07;
   g.strokeStyle='#333'; g.lineWidth=2; g.beginPath(); g.arc(cx,cy,R,0,6.2832); g.stroke();
-  line2(g,cx+(R-k)*Math.cos(at),cy+(R-k)*Math.sin(at),cx+(R+k)*Math.cos(at),cy+(R+k)*Math.sin(at),C_RED,3.6);   /* v8: objetivo ROJO */
   g.fillStyle='#FFD21F'; g.strokeStyle='#000'; g.lineWidth=2.4;   /* v8: bola rellena de AMARILLO (borde negro) */
    g.beginPath(); g.arc(cx+R*Math.cos(a),cy+R*Math.sin(a),W*0.065,0,6.2832); g.fill(); g.stroke();
+  line2(g,cx+(R-k)*Math.cos(at),cy+(R-k)*Math.sin(at),cx+(R+k)*Math.cos(at),cy+(R+k)*Math.sin(at),C_RED,3.6);   /* v8: objetivo ROJO; v26: DIBUJADO ENCIMA de la bola: con un 100 la divide en dos mitades */
 }
 function drawSquares(g,W,H,p,t){
   var c=W/2, s0=W*0.86, s1=W*0.10, s=s0-(s0-s1)*p, st=s0-(s0-s1)*t, h=st/2, L=st*0.24;
@@ -618,7 +618,7 @@ var EXS=[
   { name:'Aro',         len:2.32, dur:3000, tgt:0.50, k:1.4, cyc:true, draw:drawRing },   /* v6: giro continuo (una vuelta = dur), siempre en el mismo sentido */
   { name:'Cuadrados',   len:0.38, dur:2400, tgt:0.50, draw:drawSquares }   /* v6: objetivo en el centro del recorrido */
 ];
-EXS.forEach(function(x){ x.dur=Math.round(x.dur/(EX_SPEED*(x.k||1))); x.tol=(x.tolMs||EX_TOL_MS)/x.dur; x.vk=Math.min(1,x.len/0.86); });   /* v17: vk = factor de error por recorrido visual: en el Circulo (radio .47 de la celda) y los Cuadrados (.38) el mismo % de error se ve la mitad de lejos que en la Barra (.86), asi que cuenta menos */   /* k = velocidad extra de esa celda */
+EXS.forEach(function(x){ x.dur=Math.round(x.dur/(EX_SPEED*(x.k||1))); x.tol=Math.min((x.tolMs||EX_TOL_MS)/x.dur, EX_TOL_VIS/x.len); x.vk=Math.min(1,x.len/0.86); });   /* v17: vk = factor de error por recorrido visual: en el Circulo (radio .47 de la celda) y los Cuadrados (.38) el mismo % de error se ve la mitad de lejos que en la Barra (.86), asi que cuenta menos */   /* k = velocidad extra de esa celda */
 /* v15: CURVA DE PUNTOS calibrada con la distancia visual (quejas de Roberto: una parada "cerca" daba ~76 cuando parecia >90). Se parte del error e = |p-objetivo| - tolerancia (en fraccion
    del recorrido): hasta EX_E1 (6,7 % del recorrido) los puntos bajan suavemente de 100 a 90 (EX_K1 = 150 puntos por unidad de recorrido, ~1,5 por cada 1 %); de EX_E1 a EX_E2 (35 %) bajan
    linealmente de 90 a 0. (v1-v14: lineal de 100 a 0 en 22 % del recorrido: 76 puntos con un 8 % de error.) */
@@ -711,7 +711,7 @@ function r2(x){ return Math.round(x*100)/100; }
 /* v24: velocidad por modo. Normal y Extremo van EX_MODE_SPEED veces mas rapidos que la base (Limite no cambia). La tolerancia del 100 sigue en ms (EX_TOL_MS), asi que no se regala ni se quita margen temporal. */
 var EX_MODE_SPEED=1.4;
 var EX_SLOW=[0,7];   /* v25: celdas 1 (Barra) y 8 (Aro) conservan la velocidad de la v23 tambien en Normal y Extremo */
-function applyModeSpeed(){ var fast=(S.mode==='normal'||S.mode==='extremo'); EXS.forEach(function(x,i){ var mf=(fast && EX_SLOW.indexOf(i)<0)?EX_MODE_SPEED:1; if(x.dur0==null) x.dur0=x.dur; x.dur=Math.round(x.dur0/mf); x.tol=(x.tolMs||EX_TOL_MS)/x.dur; }); }
+function applyModeSpeed(){ var fast=(S.mode==='normal'||S.mode==='extremo'); EXS.forEach(function(x,i){ var mf=(fast && EX_SLOW.indexOf(i)<0)?EX_MODE_SPEED:1; if(x.dur0==null) x.dur0=x.dur; x.dur=Math.round(x.dur0/mf); x.tol=Math.min((x.tolMs||EX_TOL_MS)/x.dur, EX_TOL_VIS/x.len); }); }
 function makePlan(){
   var ini=[0,0,0].map(function(){ return r2(rnd(0.15,0.30)); }), cen=[0,0,0].map(function(){ return r2(rnd(0.42,0.58)); }), fin=ini.map(function(x){ return r2(1-x); });
   var zs=[].concat(ini,cen,fin), i, j, t;
@@ -760,7 +760,7 @@ function stopEx(p, ms){   /* congela el ejercicio actual con progreso p y puntua
   if(S.pressed>=EX_N){ S.nextTo=setTimeout(function(){ S.nextTo=0; finishRun(); }, 900); }
   else { S.nextTo=setTimeout(function(){ S.nextTo=0; if(S.running) startEx(i+1); }, EX_PAUSE_MS); }
 }
-document.addEventListener('pointerdown', function(e){ var g=$('game'); if(g && g.classList.contains('active') && S.running) onStop(e); });   /* v17: toda la pantalla de juego para (sin boton STOP) */
+document.addEventListener('pointerdown', function(e){ var g=$('game'); if(g && g.classList.contains('active') && S.running && !(e.target&&e.target.closest&&e.target.closest('.navbar,button'))) onStop(e); });   /* v26: los botones Inicio/Repetir no paran el ejercicio */   /* v17: toda la pantalla de juego para (sin boton STOP) */
 function onStop(e){
   if(e&&e.cancelable) e.preventDefault();
   if(!S.running || S.lock) return;
