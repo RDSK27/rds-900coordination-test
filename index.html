@@ -125,7 +125,7 @@ if('serviceWorker' in navigator){
   .x2-top{transform:rotate(180deg);}
   .x2-info{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:0 4px;flex:none;font-family:Arial,sans-serif;font-weight:900;white-space:nowrap;}
   .x2-pts{font-size:28px;line-height:1.15;color:var(--rojo);}
-  .x2-cu{font-size:21px;color:#111;}
+  .x2-gm,.x2-cu{font-size:21px;color:#111;}
   .x2-area{flex:1;min-height:0;position:relative;display:flex;}
   .x2-grid{box-sizing:border-box;}
   .x2-cross{display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:var(--rojo);font:900 44px/1 Arial,sans-serif;pointer-events:none;}
@@ -373,7 +373,7 @@ if('serviceWorker' in navigator){
           <button class="start-btn rank-btn" ontouchend="event.stopPropagation();" onclick="showRanking()" aria-label="Ranking"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 13.5v7.5M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></svg></button>
         </div>
       </div>
-  <div class="app-ver" style="margin-top:6px;padding-top:0;">v31</div>
+  <div class="app-ver" style="margin-top:6px;padding-top:0;">v32</div>
   <div id="user-name-bar" style="margin-top:8px;">
     <div style="display:flex;width:200px;gap:0;margin:0 auto;">
       <input id="user-ini-input" type="text" maxlength="3" placeholder="INI"
@@ -442,7 +442,7 @@ if('serviceWorker' in navigator){
 
   <section id="x2" class="screen">
     <div class="x2-zone x2-top" id="x2z1">
-      <div class="x2-info"><span class="x2-pts"></span><span class="x2-cu"></span></div>
+      <div class="x2-info"><span class="x2-pts"></span><span class="x2-gm"></span><span class="x2-cu"></span></div>
       <div class="x2-area">
         <div class="grid x2-grid"></div>
         <div class="x2-panel"></div>
@@ -453,7 +453,7 @@ if('serviceWorker' in navigator){
       <button id="x2Stop" type="button" aria-label="Parar">&#10005;</button>
     </div>
     <div class="x2-zone x2-bot" id="x2z0">
-      <div class="x2-info"><span class="x2-pts"></span><span class="x2-cu"></span></div>
+      <div class="x2-info"><span class="x2-pts"></span><span class="x2-gm"></span><span class="x2-cu"></span></div>
       <div class="x2-area">
         <div class="grid x2-grid"></div>
         <div class="x2-panel"></div>
@@ -1193,9 +1193,9 @@ function warmRank(mode,stim,total){
 /* ---------- modo x2: dos jugadores en un movil, sin ranking (2026-11-08; misma estructura que las demas apps x2) ----------
    Normal o Extremo. Jugador 1 = mitad de abajo, jugador 2 = mitad de arriba (girada 180 grados). Cada uno tiene sus 9 celdas y solo cuenta su toque en su zona.
    La celda activa empieza a la vez para los dos, con el mismo objetivo (en Extremo cambia a la vez para los dos), y cada uno para la suya. Cuando han parado los dos se resuelve: quien tiene mas puntos gana la celda y conserva su resultado, y al otro se le pone una X.
-   Empate de puntos: los dos conservan el resultado y nadie suma. Gana el partido el primero que gana X_WIN celdas; si se acaban las 9 sin llegar, quien lleve mas; si llevan las mismas, empate. */
-var X={on:false,mode:'normal',wins:[0,0],idx:0,state:'',to:0,raf:0,t0:0,tgt:0,leg:0,stopped:[false,false],res:[null,null],cells:[[],[]],frozen:[[],[]],ready:[false,false]};
-var X_WIN=5, X_REVEAL=1000;
+   Empate de puntos en una celda: los dos conservan el resultado y nadie suma. Gana el juego el primero que gana X_WIN celdas; si se acaban las 9 sin llegar, quien lleve mas; si llevan las mismas, quien sume mas puntos; y si tambien empatan, el juego se repite. Partido al mejor de 3. */
+var X={on:false,mode:'normal',wins:[0,0],sum:[0,0],games:[0,0],gameNo:1,hist:[],replay:false,idx:0,state:'',to:0,raf:0,t0:0,tgt:0,leg:0,stopped:[false,false],res:[null,null],cells:[[],[]],frozen:[[],[]],ready:[false,false]};
+var X_WIN=5, X_REVEAL=1000, X_WINGAMES=2, X_ORD=['primer','segundo','tercer'];
 function isX2(){ return $('segModo').querySelector('[data-v="x2"]').classList.contains('x2on'); }
 function xToggle(b){
   var box=$('segModo'), on=b.classList.toggle('x2on'), lim=box.querySelector('[data-v="limite"]');
@@ -1212,6 +1212,7 @@ function xLightsOff(){ var b=$('x2Stim'); b.className=''; b.innerHTML=''; }
 function xRender(){
   for(var p=0;p<2;p++){
     xZone(p,'.x2-pts').innerHTML=xRes(X.wins[p],X.wins[1-p]);
+    xZone(p,'.x2-gm').innerHTML=xRes(X.games[p],X.games[1-p]);
     xZone(p,'.x2-cu').textContent=Math.min(X.idx+(X.state===''||X.state==='count'||X.state==='intro'?0:1),EX_N)+'/'+EX_N;
   }
 }
@@ -1246,28 +1247,30 @@ function xBuild(){
   }
   xFit(); setTimeout(xFit,0);
 }
-function xReset(){ xClear(); X.wins=[0,0]; X.idx=0; xPanelsOff(); xLightsOff(); }
+function xReset(){ xClear(); X.wins=[0,0]; X.sum=[0,0]; X.games=[0,0]; X.gameNo=1; X.hist=[]; X.replay=false; X.idx=0; xPanelsOff(); xLightsOff(); }
 function startX2(){   /* pantalla inicial con la informacion para cada jugador */
   X.mode=selVal('segModo')==='extremo'?'extremo':'normal';
   xReset(); X.on=false; X.state='intro'; X.ready=[false,false];
   show('x2'); $('x2Stop').style.display='block'; xBuild(); xRender();
   var ext=X.mode==='extremo';
   for(var p=0;p<2;p++) xPanel(p,'<div class="x2-pt">Jugador '+(p+1)+(ext?' &middot; Extremo':'')+'</div>'
-    +'<div class="x2-pr">Uno contra uno, 9 celdas.<br>Gana el primero que gana 5.</div>'
+    +'<div class="x2-pr">Uno contra uno, al mejor de 3 juegos.<br>Gana cada juego el primero que gana 5 celdas de las 9.</div>'
     +'<div class="x2-rules">Toca en tu zona para parar tu celda lo m&aacute;s cerca posible del objetivo. Cuando hay&aacute;is parado los dos, gana la celda quien tiene m&aacute;s puntos; al otro se le pone una X.</div>'
     +xBtn('start','Empezar'));
 }
-function xReady(p,b){   /* Empezar: arranca cuando lo han pulsado los dos */
+function xReady(p,b,a){   /* Empezar/Continuar: arranca cuando lo han pulsado los dos */
   X.ready[p]=true; b.disabled=true; b.textContent='Esperando';
   if(!X.ready[0] || !X.ready[1]) return;
   X.ready=[false,false];
-  xBegin();
+  if(a==='start') xBegin(); else xContinue();
 }
 function xBegin(){
   xReset(); X.on=true; X.state=''; $('x2Stop').style.display='block';
-  S.mode=X.mode; applyModeSpeed(); X.plan=makePlan();   /* misma velocidad y objetivos que el modo de un jugador */
-  xBuild(); xRender(); xLights();
+  S.mode=X.mode; applyModeSpeed();   /* misma velocidad que el modo de un jugador */
+  xGame();
 }
+function xContinue(){ if(!X.replay) X.gameNo++; X.replay=false; xPanelsOff(); xGame(); }
+function xGame(){ X.wins=[0,0]; X.sum=[0,0]; X.idx=0; X.state=''; X.plan=makePlan(); xBuild(); xRender(); xLights(); }   /* tablero limpio y objetivos nuevos */
 function xLights(){   /* semaforo: 3 luces rojas, se quita una cada 0,8 s; al quitar la tercera empieza la primera celda */
   var box=$('x2Stim'), n=3;
   X.state='count'; box.className='x2-lights';
@@ -1314,20 +1317,38 @@ function xShow(p,i,win){   /* win: la celda es suya o empate (conserva el result
 }
 function xResolve(){
   var i=X.idx, a=X.res[0], b=X.res[1], w=a===b?-1:(a>b?0:1);
+  X.sum[0]+=a; X.sum[1]+=b;
   X.state='reveal';
   if(X.raf){ cancelAnimationFrame(X.raf); X.raf=0; }
   if(w<0){ xShow(0,i,true); xShow(1,i,true); sndScore(a); }
   else { X.wins[w]++; xShow(w,i,true); xShow(1-w,i,false); sndScore(X.res[w]); }
   xRender();
   var over=X.wins[0]>=X_WIN || X.wins[1]>=X_WIN || i>=EX_N-1;
-  X.to=setTimeout(function(){ X.to=0; if(!X.on) return; if(over) xEnd(); else xStartCell(i+1); }, X_REVEAL);
+  X.to=setTimeout(function(){ X.to=0; if(!X.on) return; if(over) xGameEnd(); else xStartCell(i+1); }, X_REVEAL);
 }
-function xEnd(){
-  var w=X.wins[0]===X.wins[1]?-1:(X.wins[0]>X.wins[1]?0:1), p;
-  X.on=false; X.state='end'; xRender(); $('x2Stop').style.display='none'; sndFinal(w<0?0:900);
-  for(p=0;p<2;p++) xPanel(p,'<div class="x2-pt">'+(w<0?'Empate':(p===w?'¡Enhorabuena, Jugador '+(p+1)+'!':'Jugador '+(w+1)+' gana el partido'))+'</div>'
-    +'<div class="x2-pr">'+(p===w?'Has ganado el partido ':'Resultado ')+xRes(X.wins[p],X.wins[1-p])+'</div>'
-    +'<div class="x2-pbs">'+xBtn('home','Inicio',true)+xBtn('again','Repetir')+'</div>');
+function xGameEnd(){
+  var w=X.wins[0]!==X.wins[1]?(X.wins[0]>X.wins[1]?0:1):(X.sum[0]===X.sum[1]?-1:(X.sum[0]>X.sum[1]?0:1)), byPts=X.wins[0]===X.wins[1], p, h, j;
+  function line(q){ return 'Celdas '+xRes(X.wins[q],X.wins[1-q])+(byPts?'<br>Puntos '+xRes(X.sum[q],X.sum[1-q]):''); }
+  if(w<0){   /* mismas celdas y mismos puntos: se repite este juego */
+    X.state='between'; X.replay=true; X.ready=[false,false]; xRender();
+    for(p=0;p<2;p++) xPanel(p,'<div class="x2-pt">Juego empatado</div><div class="x2-pr">'+line(p)+'<br>Se repite el juego</div>'+xBtn('next','Continuar'));
+    return;
+  }
+  X.games[w]++; X.hist.push([X.wins[0],X.wins[1]]);
+  if(X.games[w]>=X_WINGAMES){
+    X.on=false; X.state='end'; xRender(); $('x2Stop').style.display='none'; sndFinal(900);
+    for(p=0;p<2;p++){
+      for(h=[],j=0;j<X.hist.length;j++) h.push(xRes(X.hist[j][p],X.hist[j][1-p]));
+      xPanel(p,'<div class="x2-pt">'+(p===w?'¡Enhorabuena, Jugador '+(p+1)+'!':'Jugador '+(w+1)+' gana el partido')+'</div>'
+        +'<div class="x2-pr">'+(p===w?'Has ganado el partido ':'Resultado ')+xRes(X.games[p],X.games[1-p])+'<br>Juegos: '+h.join(', ')+'</div>'
+        +'<div class="x2-pbs">'+xBtn('home','Inicio',true)+xBtn('again','Repetir')+'</div>');
+    }
+    return;
+  }
+  X.state='between'; X.ready=[false,false]; xRender();
+  for(p=0;p<2;p++) xPanel(p,'<div class="x2-pt">Jugador '+(w+1)+' gana el '+X_ORD[X.gameNo-1]+' juego</div>'
+    +'<div class="x2-pr">'+line(p)+'<br>Juegos '+xRes(X.games[p],X.games[1-p])+'</div>'
+    +xBtn('next','Continuar'));
 }
 function xStop(){
   if(X.state==='intro'){ goHome(); return; }
@@ -1344,7 +1365,7 @@ function xStop(){
   sec.addEventListener('click', function(e){
     var b=e.target.closest ? e.target.closest('[data-x]') : null; if(!b) return;
     var a=b.getAttribute('data-x');
-    if(a==='start') xReady(parseInt(b.closest('.x2-zone').id.slice(3),10),b);
+    if(a==='start' || a==='next') xReady(parseInt(b.closest('.x2-zone').id.slice(3),10),b,a);
     else if(a==='again') xBegin();
     else if(a==='home') goHome();
   });
