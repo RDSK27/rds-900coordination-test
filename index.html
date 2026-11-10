@@ -123,6 +123,7 @@ if('serviceWorker' in navigator){
   #x2{background:#fff;touch-action:none;-webkit-user-select:none;user-select:none;}
   .x2-zone{flex:1;min-height:0;display:flex;flex-direction:column;gap:5px;padding:6px 10px 8px;box-sizing:border-box;background:#fff;}
   .x2-top{transform:rotate(180deg);}
+  #x2 .x2-zone.x2-wait .x2-grid{opacity:.4;}
   .x2-info{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:0 4px;flex:none;font-family:Arial,sans-serif;font-weight:900;white-space:nowrap;}
   .x2-pts{font-size:28px;line-height:1.15;color:var(--rojo);}
   .x2-gm,.x2-who{font-size:15px;color:#111;}
@@ -378,7 +379,7 @@ if('serviceWorker' in navigator){
           <button class="start-btn rank-btn" ontouchend="event.stopPropagation();" onclick="showRanking()" aria-label="Ranking"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 13.5v7.5M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></svg></button>
         </div>
       </div>
-  <div class="app-ver" style="margin-top:6px;padding-top:0;">v33</div>
+  <div class="app-ver" style="margin-top:6px;padding-top:0;">v34</div>
   <div id="user-name-bar" style="margin-top:8px;">
     <div style="display:flex;width:200px;gap:0;margin:0 auto;">
       <input id="user-ini-input" type="text" maxlength="3" placeholder="INI"
@@ -1197,10 +1198,11 @@ function warmRank(mode,stim,total){
 
 /* ---------- modo x2: dos jugadores en un movil, sin ranking (2026-11-08; misma estructura que las demas apps x2) ----------
    Normal o Extremo. Jugador 1 = mitad de abajo, jugador 2 = mitad de arriba (girada 180 grados). Cada uno tiene sus 9 celdas y solo cuenta su toque en su zona.
-   La celda activa empieza a la vez para los dos, con el mismo objetivo (en Extremo cambia a la vez para los dos), y cada uno para la suya. Cuando han parado los dos se resuelve: quien tiene mas puntos gana la celda y conserva su resultado, y al otro se le pone una X.
+   (2026-11-10) Por turnos: en cada celda juega primero X.first y luego el otro (la zona del que espera se atenua); la celda siguiente no empieza hasta que han parado los dos y la abre otra vez X.first.
+   X.first se sortea al empezar el partido y se alterna en cada set. Mismo objetivo en Normal; en Extremo cada turno va con sus propios cambios de objetivo. Cuando han parado los dos se resuelve: quien tiene mas puntos gana la celda y conserva su resultado, y al otro se le pone una X.
    Empate de puntos en una celda: los dos conservan el resultado y nadie suma. Gana el juego el primero que gana X_WIN celdas; si se acaban las 9 sin llegar, quien lleve mas; si llevan las mismas, quien sume mas puntos; y si tambien empatan, el juego se repite. Partido al mejor de 3. */
-var X={on:false,mode:'normal',wins:[0,0],sum:[0,0],games:[0,0],gameNo:1,hist:[],replay:false,idx:0,state:'',to:0,raf:0,t0:0,tgt:0,leg:0,stopped:[false,false],res:[null,null],cells:[[],[]],frozen:[[],[]],ready:[false,false]};
-var X_WIN=5, X_REVEAL=1000, X_WINGAMES=3, X_ORD=['primer','segundo','tercer'];
+var X={on:false,mode:'normal',wins:[0,0],sum:[0,0],games:[0,0],gameNo:1,hist:[],replay:false,first:0,turn:0,idx:0,state:'',to:0,raf:0,t0:0,tgt:0,leg:0,stopped:[false,false],res:[null,null],cells:[[],[]],frozen:[[],[]],ready:[false,false]};
+var X_WIN=5, X_REVEAL=1000, X_SWAP=700, X_WINGAMES=3, X_ORD=['primer','segundo','tercer'];
 function isX2(){ return $('segModo').querySelector('[data-v="x2"]').classList.contains('x2on'); }
 function xToggle(b){
   var box=$('segModo'), on=b.classList.toggle('x2on'), lim=box.querySelector('[data-v="limite"]');
@@ -1255,14 +1257,16 @@ function xBuild(){
 function xReset(){ xClear(); X.wins=[0,0]; X.sum=[0,0]; X.games=[0,0]; X.gameNo=1; X.hist=[]; X.replay=false; X.idx=0; xPanelsOff(); xLightsOff(); }
 function startX2(){   /* pantalla inicial con la informacion para cada jugador */
   X.mode=selVal('segModo')==='extremo'?'extremo':'normal';
-  xReset(); X.on=false; X.state='intro'; X.ready=[false,false];
+  xReset(); X.on=false; X.state='intro'; X.ready=[false,false]; X.first=Math.random()<0.5?0:1;
   show('x2'); $('x2Stop').style.display='block'; xBuild(); xRender();
   var ext=X.mode==='extremo';
   for(var p=0;p<2;p++) xPanel(p,'<div class="x2-pt">Jugador '+(p+1)+(ext?' &middot; Extremo':'')+'</div>'
     +'<div class="x2-pr">Gana el partido el primero que gane 3 sets.<br>Gana el set el primero que gana 5 celdas de las 9.</div>'
-    +'<div class="x2-rules">Toca en tu zona para parar tu celda lo m&aacute;s cerca posible del objetivo. Cuando hay&aacute;is parado los dos, gana la celda quien tiene m&aacute;s puntos; al otro se le pone una X.</div>'
-    +xBtn('start','Empezar'));
+    +'<div class="x2-rules">Por turnos: en cada celda para primero uno y luego el otro, lo m&aacute;s cerca posible del objetivo. Gana la celda quien tiene m&aacute;s puntos; al otro se le pone una X. Empieza cada celda el mismo jugador, y en cada set empieza el otro.</div>'
+    +xFirstLine(p)+xBtn('start','Empezar'));
 }
+function xFirstLine(p){ return '<div class="x2-pr"><b>'+(X.first===p?'Empiezas t&uacute;':'Empieza el Jugador '+(X.first+1))+'</b></div>'; }
+function xTurnUI(){ for(var p=0;p<2;p++) $('x2z'+p).classList.toggle('x2-wait',X.state==='play' && X.turn!==p); }
 function xReady(p,b,a){   /* Empezar/Continuar: arranca cuando lo han pulsado los dos */
   X.ready[p]=true; b.disabled=true; b.textContent='Esperando';
   if(!X.ready[0] || !X.ready[1]) return;
@@ -1274,7 +1278,7 @@ function xBegin(){
   S.mode=X.mode; applyModeSpeed();   /* misma velocidad que el modo de un jugador */
   xGame();
 }
-function xContinue(){ if(!X.replay) X.gameNo++; X.replay=false; xPanelsOff(); xGame(); }
+function xContinue(){ if(!X.replay){ X.gameNo++; X.first=1-X.first; } X.replay=false; xPanelsOff(); xGame(); }
 function xGame(){ X.wins=[0,0]; X.sum=[0,0]; X.idx=0; X.state=''; X.plan=makePlan(); xBuild(); xRender(); xLights(); }   /* tablero limpio y objetivos nuevos */
 function xLights(){   /* semaforo: 3 luces rojas, se quita una cada 0,8 s; al quitar la tercera empieza la primera celda */
   var box=$('x2Stim'), n=3;
@@ -1287,10 +1291,17 @@ function xLights(){   /* semaforo: 3 luces rojas, se quita una cada 0,8 s; al qu
   step();
 }
 function xStartCell(i){
-  X.idx=i; X.state='play'; X.stopped=[false,false]; X.res=[null,null]; X.leg=0;
-  X.tgt=X.mode==='normal'?EXS[i].tgt:X.plan[i];
-  for(var p=0;p<2;p++){ X.cells[p][i].el.classList.add('act'); xDrawCell(p,i,0,X.tgt); }
+  X.idx=i; X.stopped=[false,false]; X.res=[null,null];
+  for(var p=0;p<2;p++) xDrawCell(p,i,0,X.mode==='normal'?EXS[i].tgt:X.plan[i]);
   xRender();
+  xStartRun(X.first);
+}
+function xStartRun(p){   /* turno de p en la celda actual */
+  var i=X.idx;
+  X.turn=p; X.state='play'; X.leg=0;
+  X.tgt=X.mode==='normal'?EXS[i].tgt:X.plan[i];
+  X.cells[p][i].el.classList.add('act'); xDrawCell(p,i,0,X.tgt);
+  xTurnUI();
   X.t0=performance.now();
   if(!X.raf) X.raf=requestAnimationFrame(xLoop);
 }
@@ -1299,19 +1310,21 @@ function xLoop(){
   if(!X.on || X.state!=='play') return;
   var ex=EXS[X.idx], ms=performance.now()-X.t0, u=ms/ex.dur;
   if(X.mode==='extremo'){ var leg=Math.floor(u/2); if(leg!==X.leg){ X.leg=leg; X.tgt=randTgt(X.idx,X.tgt); } }   /* cambia tras cada ida y vuelta (o dos vueltas), a la vez para los dos */
-  var prog=pOf(ex,ms);
-  for(var p=0;p<2;p++) if(!X.stopped[p]) xDrawCell(p,X.idx,prog,X.tgt);
+  xDrawCell(X.turn,X.idx,pOf(ex,ms),X.tgt);
   X.raf=requestAnimationFrame(xLoop);
 }
 function xTap(p){
-  if(!X.on || X.state!=='play' || X.stopped[p]) return;
+  if(!X.on || X.state!=='play' || X.turn!==p || X.stopped[p]) return;
   var i=X.idx, ex=EXS[i], ms=performance.now()-X.t0, prog=pOf(ex,ms), d=Math.abs(prog-X.tgt), err=ex.cyc?Math.min(d,1-d):d;
   X.stopped[p]=true; X.res[p]=exScore(err,ex.tol,ex.vk);
   X.frozen[p][i]={p:prog,t:X.tgt};
   xDrawCell(p,i,prog,X.tgt);
   X.cells[p][i].el.classList.remove('act');
   sndStop();
-  if(X.stopped[0] && X.stopped[1]) xResolve();
+  if(X.stopped[0] && X.stopped[1]){ xTurnUI(); xResolve(); return; }
+  X.state='swap'; xTurnUI();
+  if(X.raf){ cancelAnimationFrame(X.raf); X.raf=0; }
+  X.to=setTimeout(function(){ X.to=0; if(X.on) xStartRun(1-p); }, X_SWAP);
 }
 function xShow(p,i,win){   /* win: la celda es suya o empate (conserva el resultado); si no, X */
   var c=X.cells[p][i];
@@ -1353,11 +1366,12 @@ function xGameEnd(){
   X.state='between'; X.ready=[false,false]; xRender();
   for(p=0;p<2;p++) xPanel(p,'<div class="x2-pt">Has '+(p===w?'ganado':'perdido')+' el set '+X.gameNo+'</div>'
     +'<div class="x2-pr">'+line(p)+'<br>Partido '+xRes(X.games[p],X.games[1-p])+'</div>'
+    +'<div class="x2-pr"><b>'+(X.first!==p?'Ahora empiezas t&uacute;':'Ahora empieza el Jugador '+(2-X.first))+'</b></div>'
     +xBtn('next','Continuar'));
 }
 function xStop(){
   if(X.state==='intro'){ goHome(); return; }
-  xClear(); X.on=false; X.state='end'; xLightsOff(); xRender(); $('x2Stop').style.display='none';
+  xClear(); X.on=false; X.state='end'; xTurnUI(); xLightsOff(); xRender(); $('x2Stop').style.display='none';
   for(var p=0;p<2;p++) xPanel(p,'<div class="x2-pt">Partida parada</div><div class="x2-pbs">'+xBtn('home','Inicio',true)+xBtn('again','Repetir')+'</div>');
 }
 (function(){
@@ -1371,7 +1385,7 @@ function xStop(){
     var b=e.target.closest ? e.target.closest('[data-x]') : null; if(!b) return;
     var a=b.getAttribute('data-x');
     if(a==='start' || a==='next') xReady(parseInt(b.closest('.x2-zone').id.slice(3),10),b,a);
-    else if(a==='again') xBegin();
+    else if(a==='again'){ X.first=Math.random()<0.5?0:1; xBegin(); }
     else if(a==='home') goHome();
   });
   $('x2Stop').addEventListener('click', xStop);
